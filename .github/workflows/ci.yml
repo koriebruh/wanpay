@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+# Principle of least privilege — jobs only get what they need
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build & Vet
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +32,7 @@ jobs:
   mod-tidy:
     name: Mod Tidy
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +49,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -52,26 +59,44 @@ jobs:
           cache: true
 
       - name: Test
-        run: go test -race -count=1 -timeout=120s ./...
+        run: go test -race -count=1 -timeout=120s -coverprofile=coverage.out ./...
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+          retention-days: 7
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
+      # cache: false — golangci-lint-action manages its own cache
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: false
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+          # goinstall compiles golangci-lint from source using the runner's Go version,
+          # preventing "go version mismatch" errors when go.mod targets a newer Go release.
+          install-mode: goinstall
 
   security:
     name: Security
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # gosec SARIF upload needs security-events write permission
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
@@ -84,4 +109,11 @@ jobs:
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
 
       - name: Run gosec
-        run: gosec ./...
+        run: gosec -fmt sarif -out gosec-results.sarif ./...
+        # exit code 1 means findings — upload SARIF regardless so GitHub shows them
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gosec-results.sarif
