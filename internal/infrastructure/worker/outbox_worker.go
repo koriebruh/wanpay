@@ -128,7 +128,9 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 
 	if err := validateWebhookURL(row.TargetURL); err != nil {
 		log.Error("outbox: invalid target_url, marking failed", zap.Error(err))
-		_ = w.markFailed(ctx, row.ID, err.Error())
+		if markErr := w.markFailed(ctx, row.ID, err.Error()); markErr != nil {
+			log.Error("outbox: mark failed error", zap.Error(markErr))
+		}
 		return
 	}
 

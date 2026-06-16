@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 
 	"wanpey/core/internal/infrastructure/cache"
 	"wanpey/core/pkg/response"
@@ -40,8 +41,8 @@ func Idempotency(c cache.Cache) echo.MiddlewareFunc {
 				return next(ec)
 			}
 
-			merchantID, _ := ec.Get("merchant_id").(string)
-			if merchantID == "" {
+			merchantID, ok := ec.Get("merchant_id").(string)
+			if !ok || merchantID == "" {
 				// Do not process idempotency without an authenticated identity —
 				// keys from different merchants would collide in the same namespace.
 				return next(ec)
@@ -85,8 +86,12 @@ func Idempotency(c cache.Cache) echo.MiddlewareFunc {
 			status := ec.Response().Status
 
 			if handlerErr != nil || status >= 500 {
-				// Delete claim so the client can retry fresh.
-				_ = c.Del(ctx, redisKey)
+				// Delete claim so the client can retry fresh. Best-effort — if it fails the
+				// key expires naturally after processingTTL (30s).
+				if delErr := c.Del(ctx, redisKey); delErr != nil {
+					zap.L().Warn("idempotency: failed to delete processing guard",
+						zap.String("key", redisKey), zap.Error(delErr))
+				}
 				return handlerErr
 			}
 
@@ -96,7 +101,10 @@ func Idempotency(c cache.Cache) echo.MiddlewareFunc {
 				Body:       rec.Body(),
 			}
 			if b, jsonErr := json.Marshal(resp); jsonErr == nil {
-				_ = c.Set(ctx, redisKey, b, idempotencyTTL)
+				if cacheErr := c.Set(ctx, redisKey, b, idempotencyTTL); cacheErr != nil {
+					zap.L().Warn("idempotency: failed to cache response — duplicate request will reprocess",
+						zap.String("key", redisKey), zap.Error(cacheErr))
+				}
 			}
 
 			return nil

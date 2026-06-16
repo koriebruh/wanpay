@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/XSAM/otelsql"
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // registers the postgres driver with database/sql
 	"github.com/samber/do/v2"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.uber.org/zap"

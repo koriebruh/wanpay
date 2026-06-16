@@ -121,7 +121,9 @@ func (a *App) Run() error {
 		return a.Shutdown()
 	case err := <-serverErr:
 		log.Error("server crashed", zap.Error(err))
-		_ = a.Shutdown()
+		if shutdownErr := a.Shutdown(); shutdownErr != nil {
+			log.Error("shutdown error after server crash", zap.Error(shutdownErr))
+		}
 		return err
 	}
 }
@@ -208,7 +210,7 @@ func (a *App) shutdown() error {
 
 	// Stage 3: Flush logger before infra closes so final audit logs are not lost.
 	log.Info("shutdown complete")
-	_ = log.Sync()
+	_ = log.Sync() //nolint:errcheck // Sync on stdout/stderr returns an error on some OS; nothing actionable here
 
 	// Stage 4: Close infra in reverse-registration order.
 	return a.injector.Shutdown()

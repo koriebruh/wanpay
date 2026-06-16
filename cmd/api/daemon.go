@@ -46,7 +46,11 @@ var daemonStartCmd = &cobra.Command{
 			return nil
 		}
 
-		defer ctx.Release()
+		defer func() {
+			if err := ctx.Release(); err != nil {
+				fmt.Printf("failed to release daemon context: %v\n", err)
+			}
+		}()
 
 		a := app.New()
 		if err := a.Boot(); err != nil {

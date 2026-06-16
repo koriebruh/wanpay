@@ -52,7 +52,7 @@ func buildEcho(cfg *config.Config, log *zap.Logger) *echo.Echo {
 	if reqTimeout <= 0 || reqTimeout > 30*time.Second {
 		reqTimeout = 30 * time.Second
 	}
-	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+	e.Use(middleware.ContextTimeoutWithConfig(middleware.ContextTimeoutConfig{
 		Timeout: reqTimeout,
 	}))
 
@@ -149,6 +149,11 @@ func globalErrorHandler(log *zap.Logger, env string) echo.HTTPErrorHandler {
 			}
 		}
 
-		_ = response.Err(c, status, message, details...)
+		if respErr := response.Err(c, status, message, details...); respErr != nil {
+			log.Error("failed to write error response",
+				zap.String("request_id", requestID),
+				zap.Error(respErr),
+			)
+		}
 	}
 }

@@ -19,7 +19,7 @@ type Config struct {
 
 type OTELConfig struct {
 	Enabled     bool    `toml:"enabled"`
-	Endpoint    string  `toml:"endpoint"`    // Jaeger OTLP gRPC: host:port
+	Endpoint    string  `toml:"endpoint"` // Jaeger OTLP gRPC: host:port
 	ServiceName string  `toml:"service_name"`
 	SampleRatio float64 `toml:"sample_ratio"` // 1.0 = always, 0.1 = 10%
 }
