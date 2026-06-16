@@ -1,29 +1,27 @@
-version: "2"
-
 linters:
-  default: none
+  disable-all: true
   enable:
     # correctness
-    - errcheck        # unchecked errors — critical for DB/cache calls
-    - govet           # go vet (shadowing, printf mismatches, etc.)
-    - staticcheck     # comprehensive static analysis
-    - ineffassign     # assigned but never used
-    - unused          # unused code
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
 
     # security — mandatory for payment services
-    - gosec           # common security issues (SQL injection, hardcoded creds, etc.)
+    - gosec
 
     # style / maintainability
-    - revive          # fast, configurable linter (replaces golint)
-    - goimports       # import ordering
-    - misspell        # typos in comments and strings
-    - bodyclose       # HTTP response body not closed
-    - noctx           # HTTP requests without context
-    - exhaustive      # non-exhaustive switch on enums
+    - revive
+    - goimports
+    - misspell
+    - bodyclose
+    - noctx
+    - exhaustive
 
     # complexity
-    - cyclop          # cyclomatic complexity per function
-    - funlen          # function length
+    - cyclop
+    - funlen
 
 linters-settings:
   errcheck:
@@ -55,14 +53,12 @@ linters-settings:
 
 issues:
   exclude-rules:
-    # test files are exempt from some rules
     - path: "_test\\.go"
       linters:
         - funlen
         - cyclop
         - gosec
 
-    # migration CLI is exempt from complexity rules
     - path: "cmd/api/migrate\\.go"
       linters:
         - funlen
