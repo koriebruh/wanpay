@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     ./cmd/api
 
 # Stage 2: Runtime
-FROM alpine:3.20
+FROM alpine:3.24
 
 # ca-certificates required for TLS to payment providers; tzdata for correct timestamps
 RUN apk --no-cache add ca-certificates tzdata
