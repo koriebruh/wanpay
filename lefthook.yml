@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://json.schemastore.org/lefthook.json
+
+# pre-commit: fast checks on every commit
+pre-commit:
+  parallel: true
+  commands:
+    imports:
+      glob: "*.go"
+      run: goimports -l {staged_files} | grep . && exit 1 || exit 0
+      fail_text: "Unformatted or unordered imports. Run: goimports -w ."
+
+    vet:
+      run: go vet ./...
+      fail_text: "go vet reported issues — fix before committing"
+
+    build:
+      run: go build ./...
+      fail_text: "Build failed — fix compilation errors before committing"
+
+# pre-push: full CI simulation — mirrors what GitHub Actions will run
+pre-push:
+  parallel: true
+  commands:
+    test:
+      run: go test -race -count=1 -timeout=120s ./...
+      fail_text: "Tests failed — all tests must pass before pushing"
+
+    lint:
+      run: golangci-lint run ./...
+      fail_text: "Linter found issues — fix before pushing (same check runs in CI)"
+
+    mod-tidy:
+      run: go mod tidy && git diff --exit-code go.mod go.sum
+      fail_text: "go.mod/go.sum not tidy. Run: go mod tidy"
+
+    security:
+      run: gosec ./...
+      fail_text: "Security issues found — payment services must pass gosec"
+
+commit-msg:
+  commands:
+    conventional:
+      run: 'grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-z/-]+\))?: .+" {1}'
+      fail_text: "Use Conventional Commits: feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert"

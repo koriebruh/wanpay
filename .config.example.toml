@@ -1,0 +1,49 @@
+[app]
+name        = "wanpey"
+env         = "development"   # development | production
+port        = "8080"
+base_url    = "http://localhost:8080"
+callback_url = "http://localhost:8080/webhook"
+
+[app.shutdown]
+timeout_seconds = 30   # detik tunggu in-flight request selesai sebelum force kill
+
+[app.http]
+request_timeout_seconds = 30              # max durasi per request
+cors_allow_origins = ["http://localhost:3000"]  # production: isi domain merchant
+
+[database]
+dsn            = "postgres://postgres:postgres@localhost:5432/wanpey?sslmode=disable"
+max_open_conns = 25
+max_idle_conns = 10
+conn_max_lifetime_minutes = 5
+
+[redis]
+enabled  = true            # false = skip koneksi Redis, IsEnabled() return false
+addr     = "localhost:6379"
+password = ""
+db       = 0
+
+[logger]
+level      = "debug"   # debug | info | warn | error
+encoding   = "console" # console | json
+output     = "stdout"
+
+[provider.midtrans]
+server_key    = ""
+client_key    = ""
+is_production = false
+
+[provider.xendit]
+secret_key    = ""
+webhook_token = ""
+
+[provider.doku]
+client_id  = ""
+secret_key = ""
+
+[otel]
+enabled      = true              # false = no-op tracer, tidak ada koneksi ke Jaeger
+endpoint     = "localhost:4317"  # Jaeger OTLP gRPC
+service_name = "wanpey"
+sample_ratio = 1.0               # 1.0 = 100% dev; production: 0.1 (10%)

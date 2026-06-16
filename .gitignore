@@ -1,0 +1,10 @@
+.config.toml
+.idea
+.zed
+.vscode
+tmp/
+wanpey
+*.pid
+.helix
+.dist/linux
+.env

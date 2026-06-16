@@ -1,0 +1,80 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: wanpey-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wanpey
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Run migrations manually after infra is up: make migrate-up
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wanpey"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: wanpey-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: wanpey-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: memory
+    ports:
+      - "127.0.0.1:16686:16686"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Uncomment to deploy via Docker; for local dev use `make dev` (air hot reload).
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: wanpey-app
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:8080:8080"
+  #   volumes:
+  #     - ./.config.toml:/app/.config.toml:ro
+  #   environment:
+  #     CONFIG_PATH: /app/.config.toml
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     jaeger:
+  #       condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

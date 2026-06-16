@@ -1,0 +1,32 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "tmp/main"
+  cmd = "go build -o ./tmp/main ./cmd/api"
+
+  # Watch .go dan .toml — config change juga trigger reload
+  include_ext = ["go", "toml"]
+
+  exclude_dir   = ["tmp", "vendor", "testdata", ".git", "migrations"]
+  exclude_regex = ["_test\\.go"]
+
+  # Delay setelah file change (ms) — cegah rebuild ganda saat save banyak file sekaligus
+  delay = 1000
+
+  kill_delay     = "500ms"
+  send_interrupt = true
+  stop_on_error  = false
+
+[log]
+  time      = true
+  main_only = false
+
+[color]
+  main    = "magenta"
+  watcher = "cyan"
+  build   = "yellow"
+  runner  = "green"
+
+[misc]
+  clean_on_exit = true
