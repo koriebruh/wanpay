@@ -1,10 +1,49 @@
+# Sensitive config 
 .config.toml
-.idea
-.zed
-.vscode
-tmp/
-wanpey
-*.pid
-.helix
-.dist/linux
 .env
+.env.*
+*.secret
+secrets/
+
+# TLS / private keys (NEVER commit)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.der
+
+# Go build artifacts
+tmp/
+dist/
+vendor/
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Daemon
+*.pid
+wanpey
+
+# Logs
+*.log
+logs/
+
+# IDE / editor
+.idea/
+.vscode/
+.zed/
+.helix/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tooling
+gosec-results.sarif
+
+# Claude Code
+.claude/

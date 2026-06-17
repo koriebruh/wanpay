@@ -64,8 +64,26 @@ func buildEcho(cfg *config.Config, log *zap.Logger) *echo.Echo {
 	}
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: origins,
-		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-		AllowHeaders: []string{echo.HeaderContentType, "X-API-Key", "X-Idempotency-Key", echo.HeaderAuthorization},
+		AllowMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodOptions,
+		},
+		AllowHeaders: []string{
+			echo.HeaderContentType,
+			echo.HeaderAccept,
+			"X-API-Key",
+			"X-Idempotency-Key",
+			echo.HeaderAuthorization,
+		},
+		ExposeHeaders: []string{
+			echo.HeaderXRequestID, // allow frontend to read request ID for error reporting
+		},
+		AllowCredentials: false, // API key auth — cookies not used
+		MaxAge:           86400, // preflight cache: 24h
 	}))
 
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
