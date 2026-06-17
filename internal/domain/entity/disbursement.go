@@ -22,8 +22,8 @@ type Disbursement struct {
 	BankCode      BankCode
 	AccountNumber string
 	AccountName   string
-	Amount        int64  // gross amount disbursed in IDR
-	FeeAmount     int64  // fee charged to merchant for this disbursement; deducted from balance
+	Amount        int64 // gross amount disbursed in IDR
+	FeeAmount     int64 // fee charged to merchant for this disbursement; deducted from balance
 	Currency      Currency
 	Description   string
 	FailureReason string

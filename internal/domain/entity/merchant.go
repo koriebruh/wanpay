@@ -5,7 +5,7 @@ import "time"
 type MerchantStatus string
 
 const (
-	MerchantStatusPending   MerchantStatus = "pending"   // awaiting KYC/approval
+	MerchantStatusPending   MerchantStatus = "pending" // awaiting KYC/approval
 	MerchantStatusActive    MerchantStatus = "active"
 	MerchantStatusSuspended MerchantStatus = "suspended" // temporarily blocked
 	MerchantStatusInactive  MerchantStatus = "inactive"  // closed account

@@ -30,8 +30,8 @@ type DisbursementOutput struct {
 	BankCode      entity.BankCode
 	AccountNumber string
 	AccountName   string
-	Amount        int64  // gross disbursement amount
-	FeeAmount     int64  // fee charged to merchant for this disbursement
+	Amount        int64 // gross disbursement amount
+	FeeAmount     int64 // fee charged to merchant for this disbursement
 	Currency      entity.Currency
 	Description   string
 	FailureReason string

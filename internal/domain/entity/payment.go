@@ -56,8 +56,8 @@ type Payment struct {
 	Method        PaymentMethod
 	Provider      Provider
 	Status        PaymentStatus
-	Amount        int64    // gross amount paid by customer, smallest unit (IDR = 1 IDR)
-	FeeAmount     int64    // fee charged to merchant; populated on webhook receipt (0 while pending)
+	Amount        int64 // gross amount paid by customer, smallest unit (IDR = 1 IDR)
+	FeeAmount     int64 // fee charged to merchant; populated on webhook receipt (0 while pending)
 	Currency      Currency
 	Description   string
 	CustomerName  string
@@ -86,6 +86,8 @@ func (p *Payment) IsFinal() bool {
 	switch p.Status {
 	case PaymentStatusPaid, PaymentStatusExpired, PaymentStatusFailed, PaymentStatusCancelled:
 		return true
+	case PaymentStatusPending:
+		return false
 	}
 	return false
 }
