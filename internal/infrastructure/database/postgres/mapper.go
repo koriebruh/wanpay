@@ -72,7 +72,9 @@ func toEntityPayment(p gen.Payment) *entity.Payment {
 		UpdatedAt:     p.UpdatedAt,
 	}
 	if len(p.Metadata) > 0 {
-		_ = json.Unmarshal(p.Metadata, &ep.Metadata)
+		if err := json.Unmarshal(p.Metadata, &ep.Metadata); err != nil {
+			ep.Metadata = map[string]any{}
+		}
 	}
 	return ep
 }
@@ -118,7 +120,9 @@ func toEntityMerchant(m gen.Merchant) *entity.Merchant {
 		UpdatedAt:     m.UpdatedAt,
 	}
 	if len(m.FeeConfig) > 0 {
-		_ = json.Unmarshal(m.FeeConfig, &em.FeeConfig)
+		if err := json.Unmarshal(m.FeeConfig, &em.FeeConfig); err != nil {
+			em.FeeConfig = entity.FeeConfig{}
+		}
 	}
 	return em
 }
@@ -170,7 +174,9 @@ func toEntityPaymentAudit(a gen.PaymentAudit) *entity.PaymentAudit {
 		ea.OldStatus = &st
 	}
 	if len(a.Metadata) > 0 {
-		_ = json.Unmarshal(a.Metadata, &ea.Metadata)
+		if err := json.Unmarshal(a.Metadata, &ea.Metadata); err != nil {
+			ea.Metadata = map[string]any{}
+		}
 	}
 	return ea
 }

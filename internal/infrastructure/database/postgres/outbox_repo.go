@@ -49,7 +49,7 @@ func (r *OutboxRepo) Insert(ctx context.Context, eventType, targetURL string, pa
 // Lease returns up to limit undelivered events and locks them for processing.
 // Uses FOR UPDATE SKIP LOCKED — concurrent workers never pick the same row.
 func (r *OutboxRepo) Lease(ctx context.Context, limit int) ([]gen.Outbox, error) {
-	rows, err := r.q.LeaseOutboxEvents(ctx, int32(limit))
+	rows, err := r.q.LeaseOutboxEvents(ctx, int32(limit)) //nolint:gosec // limit is user-controlled input capped before this call
 	if err != nil {
 		return nil, fmt.Errorf("lease outbox events: %w", err)
 	}

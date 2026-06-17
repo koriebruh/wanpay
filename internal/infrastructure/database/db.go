@@ -36,7 +36,10 @@ func WithTx(ctx context.Context, tx *sql.Tx) context.Context {
 // TxFromContext retrieves the active *sql.Tx from context, or nil if none was set.
 // Postgres repositories use this to create a transactional sqlc Queries instance.
 func TxFromContext(ctx context.Context) *sql.Tx {
-	tx, _ := ctx.Value(txKey{}).(*sql.Tx)
+	tx, ok := ctx.Value(txKey{}).(*sql.Tx)
+	if !ok {
+		return nil
+	}
 	return tx
 }
 
@@ -51,7 +54,6 @@ func QuerierFromContext(ctx context.Context, db Querier) Querier {
 
 // RunInTx executes fn inside a single transaction. Commits on success, rolls back on any error.
 // Panics are caught, the transaction is rolled back, then the panic is re-raised.
-// Usage: inject the active tx into ctx so repositories pick it up automatically.
 //
 //	err = database.RunInTx(ctx, db, nil, func(ctx context.Context) error {
 //	    if err := paymentRepo.Update(ctx, p); err != nil { return err }
@@ -65,14 +67,16 @@ func RunInTx(ctx context.Context, db SQLDB, opts *sql.TxOptions, fn func(ctx con
 
 	defer func() {
 		if p := recover(); p != nil {
-			_ = tx.Rollback()
+			_ = tx.Rollback() //nolint:errcheck // best-effort during panic recovery; nothing actionable
 			panic(p)
 		}
 	}()
 
 	txCtx := WithTx(ctx, tx)
 	if err := fn(txCtx); err != nil {
-		_ = tx.Rollback()
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("rollback: %w (original: %v)", rbErr, err)
+		}
 		return err
 	}
 

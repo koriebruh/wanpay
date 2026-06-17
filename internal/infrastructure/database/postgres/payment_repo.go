@@ -149,7 +149,7 @@ func (r *paymentRepo) List(ctx context.Context, f repository.ListPaymentFilter) 
 	}
 
 	page, limit := normalizePage(f.Page, f.Limit)
-	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic
+	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic,gosec // limit capped at maxLimit=100, never overflows int32
 	query := fmt.Sprintf(
 		"SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
 		where, idx, idx+1,

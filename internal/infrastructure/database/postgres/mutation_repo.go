@@ -116,7 +116,7 @@ func (r *mutationRepo) List(ctx context.Context, f repository.ListMutationFilter
 	}
 
 	page, limit := normalizePage(f.Page, f.Limit)
-	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic
+	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic,gosec // limit capped at maxLimit=100, never overflows int32
 	query := fmt.Sprintf(
 		"SELECT id, reference_id, reference_type, merchant_id, type, amount, fee_amount, currency, description, created_at FROM mutations%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
 		where, idx, idx+1,

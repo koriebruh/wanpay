@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	apiKeyHeader = "X-API-Key"
+	apiKeyHeader = "X-API-Key" //nolint:gosec // false positive: this is an HTTP header name, not a credential
 
 	// ContextKeyMerchantID is the Echo context key set by APIKeyAuth.
 	// Downstream middleware (Idempotency) and handlers read this key.

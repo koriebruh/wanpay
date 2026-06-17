@@ -19,8 +19,8 @@ import (
 	"wanpey/core/internal/infrastructure/cache"
 	"wanpey/core/internal/infrastructure/config"
 	"wanpey/core/internal/infrastructure/database"
-	"wanpey/core/internal/infrastructure/logger"
 	"wanpey/core/internal/infrastructure/database/postgres"
+	"wanpey/core/internal/infrastructure/logger"
 	"wanpey/core/internal/infrastructure/telemetry"
 	"wanpey/core/internal/infrastructure/worker"
 )

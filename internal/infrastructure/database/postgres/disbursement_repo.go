@@ -132,7 +132,7 @@ func (r *disbursementRepo) List(ctx context.Context, f repository.ListDisburseme
 	}
 
 	page, limit := normalizePage(f.Page, f.Limit)
-	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic
+	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic,gosec // limit capped at maxLimit=100, never overflows int32
 	query := fmt.Sprintf(
 		"SELECT id, merchant_id, external_id, provider, status, bank_code, account_number, account_name, amount, fee_amount, currency, description, failure_reason, completed_at, failed_at, created_at, updated_at FROM disbursements%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
 		where, idx, idx+1,
