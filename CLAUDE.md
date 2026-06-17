@@ -12,7 +12,7 @@ Module path: `wanpey/core` (Go 1.25)
 
 ```bash
 # First-time setup (once per clone)
-make install-tools   # installs lefthook, golangci-lint, gosec, goimports, gotests, stringer, gomodifytags
+make install-tools   # installs lefthook, golangci-lint, gosec, goimports, gotests, stringer, gomodifytags, sqlc
 make install-hooks   # activates git hooks (pre-commit, pre-push, commit-msg)
 
 # Daily development
@@ -25,7 +25,7 @@ make vet             # go vet ./...
 # Single package test
 go test -race -run TestFunctionName ./internal/path/to/package/...
 
-# Infrastructure (postgres + redis + jaeger)
+# Infrastructure (postgres + pgbouncer + redis + jaeger)
 make infra-up
 make infra-down
 
@@ -33,6 +33,9 @@ make infra-down
 make migrate-up
 make migrate-down
 make migrate-status
+
+# sqlc — regenerate after editing query/*.sql files
+make sqlc
 
 # Daemon
 make daemon-start
@@ -67,9 +70,39 @@ samber/do v2 — lazy singleton, lifecycle via `do.Shutdownable`.
 | Interface | Location | Reason |
 |---|---|---|
 | `database.SQLDB` | `internal/infrastructure/database/db.go` | Swappable SQL backend, mockable in tests |
+| `database.Querier` | `internal/infrastructure/database/db.go` | Subset of SQLDB — both `*sql.DB` and `*sql.Tx` implement this |
 | `cache.Cache` | `internal/infrastructure/cache/cache.go` | Redis or in-memory fallback transparently |
 
 `cache.ProvideCache` returns `redisCache` when Redis is enabled, `memoryCache` when disabled — idempotency works in both modes.
+
+## Database Layer
+
+```
+internal/infrastructure/database/
+├── db.go               ← interfaces only: SQLDB, Querier, RunInTx, WithTx, TxFromContext
+└── postgres/           ← all concrete postgres code
+    ├── gen/            ← sqlc generated (DO NOT EDIT — run make sqlc to regenerate)
+    ├── query/          ← SQL source files (edit here, then run make sqlc)
+    ├── provider.go     ← postgres driver + ProvideDB for DI
+    ├── mapper.go       ← converts gen.* ↔ entity.*
+    ├── *_repo.go       ← implements domain repository interfaces
+    └── outbox_repo.go  ← outbox operations for worker
+```
+
+**Transaction pattern** — always use `database.RunInTx` for multi-step operations:
+```go
+err = database.RunInTx(ctx, db, nil, func(ctx context.Context) error {
+    if err := paymentRepo.Update(ctx, p); err != nil { return err }
+    if err := mutationRepo.Save(ctx, m); err != nil { return err }
+    return outboxRepo.Insert(ctx, eventType, targetURL, payload)
+})
+```
+Tx is propagated via context — all repos call `database.TxFromContext(ctx)` internally. No need to pass tx explicitly.
+
+**sqlc workflow** — when adding or changing a query:
+1. Edit the relevant `.sql` file in `internal/infrastructure/database/postgres/query/`
+2. Run `make sqlc` to regenerate `gen/`
+3. Update the corresponding `*_repo.go` to use the new generated method
 
 ## Graceful Shutdown Order
 
@@ -85,13 +118,23 @@ Workers must never query the DB after stage 4 starts — always check `ctx.Done(
 
 **Idempotency** (`internal/delivery/http/middleware/idempotency.go`): atomic `SetNX` claim with 30s processing guard, 24h TTL for cached responses. Key format: `idempotency:{merchant_id}:{key}`. Delete key on 5xx so client can retry. Requires `merchant_id` in Echo context — skip if not set.
 
-**Outbox** (`internal/infrastructure/worker/outbox_worker.go`): poll every 5s, atomic lease via `FOR UPDATE SKIP LOCKED` (prevents double-delivery without holding a transaction during HTTP). `InsertOutbox()` must be called inside the same DB transaction as the payment status update. Mark `failed_at` after max attempts.
+**Auth** (`internal/delivery/http/middleware/auth.go`): `X-API-Key` header → SHA256 hash → `MerchantRepository.FindByAPIKey`. Returns 401 for both not-found and DB errors (avoids key enumeration). Sets `merchant_id` in Echo context.
 
-**Circuit breaker** (`internal/infrastructure/provider/circuit_breaker.go`): wrap every provider call. Open after 5 consecutive failures, half-open after 30s.
+**Outbox** (`internal/infrastructure/worker/outbox_worker.go`): poll every 5s, atomic lease via `FOR UPDATE SKIP LOCKED`. Delivers up to 5 webhooks concurrently per batch. DB status writes (`markDelivered`, `scheduleRetry`) use a detached 5s context so they succeed even during graceful shutdown. `OutboxRepo.Insert()` must be called inside the same DB transaction as the payment status update.
+
+**Circuit breaker**: wrap every provider call. Open after 5 consecutive failures, half-open after 30s. (Implementation in `internal/infrastructure/database/postgres/provider/` — not yet built.)
 
 **Signature** (`pkg/signature/`): `Sign`/`Verify` use HMAC-SHA256 with `hmac.Equal` (constant-time). `SignSHA512`/`VerifySHA512` for DOKU.
 
 **PII** (`pkg/mask/`): always wrap sensitive fields with `mask.Card`, `mask.Email`, `mask.Phone`, `mask.Name`, `mask.Secret` before passing to `zap.String`.
+
+## Rate Limiting
+
+Rate limiting is **not** done at the app level — it must be handled at the infrastructure layer (Nginx, Traefik, or cloud load balancer).
+
+Reason: app-level in-memory rate limiting breaks with autoscaling (each instance has its own counter), blocks provider webhook callbacks (Midtrans/Xendit/DOKU), and interferes with load testing (k6).
+
+Webhook routes (`/webhooks/*`) must never be rate limited.
 
 ## Business Model: PayFac / Aggregator
 
@@ -120,7 +163,17 @@ Key design decisions:
 
 Format: `migrations/NNNNNN_name.up.sql` / `.down.sql` (golang-migrate v4). Run `make migrate-up` from project root — the `file://migrations` source path is relative to CWD.
 
-Migration `000002_payment_audits` is **not yet created** — do not create it until explicitly requested.
+Current migrations:
+- `000001_outbox` — outbox table
+- `000002_schema` — all business tables: merchants, merchant_bank_accounts, payments, disbursements, mutations, payment_audits
+
+## Infrastructure
+
+**PgBouncer** — app connects to PgBouncer on port **6432** (not directly to Postgres on 5432).
+- Pool mode: `transaction` — connection released after each tx, optimal for autoscaling
+- `max_client_conn=1000`, `default_pool_size=25` real Postgres connections
+- Compatible with `database.RunInTx` — one `BEGIN/COMMIT` = one transaction
+- Does NOT support: `SET` outside tx, advisory locks, `LISTEN/NOTIFY` (Wanpey does not use any of these)
 
 ## Git Hooks & CI
 

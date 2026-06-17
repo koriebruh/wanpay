@@ -24,7 +24,7 @@ const (
 	outboxHTTPTimeout   = 10 * time.Second
 	outboxClaimLease    = 60 * time.Second
 	outboxMaxErrLen     = 500
-	outboxMaxConcurrent = 5  // max parallel webhook deliveries per batch
+	outboxMaxConcurrent = 5 // max parallel webhook deliveries per batch
 )
 
 type outboxRow struct {

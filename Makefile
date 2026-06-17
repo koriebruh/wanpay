@@ -8,6 +8,9 @@ APP_NAME = wanpey
 CMD_PATH = ./cmd/api
 BIN      = ./tmp/main
 
+# Make go-installed tools (air, sqlc, golangci-lint, etc.) available without full path.
+export PATH := $(shell go env GOPATH)/bin:$(PATH)
+
 ## dev: hot reload with air
 dev:
 	air
@@ -51,6 +54,7 @@ install-hooks:
 
 ## install-tools: install all local dev tools (run once after clone)
 install-tools:
+	go install github.com/air-verse/air@latest
 	go install github.com/evilmartians/lefthook@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install github.com/securego/gosec/v2/cmd/gosec@latest

@@ -22,8 +22,17 @@ func newMigrator() (*migrate.Migrate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
+
+	// Migrations must connect directly to Postgres, not through PgBouncer.
+	// PgBouncer transaction mode does not support advisory locks which golang-migrate requires.
+	// Set migrate_dsn in config to point to Postgres directly (port 5432).
+	dsn := cfg.Database.MigrateDSN
+	if dsn == "" {
+		dsn = cfg.Database.DSN
+	}
+
 	// "file://migrations" resolves relative to CWD — always run via `make migrate-up` from project root.
-	m, err := migrate.New("file://migrations", cfg.Database.DSN)
+	m, err := migrate.New("file://migrations", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("init migrator: %w", err)
 	}

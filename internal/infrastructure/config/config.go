@@ -47,6 +47,7 @@ type ShutdownConfig struct {
 
 type DatabaseConfig struct {
 	DSN                    string `toml:"dsn"`
+	MigrateDSN             string `toml:"migrate_dsn"` // direct Postgres (bypasses PgBouncer — advisory locks)
 	MaxOpenConns           int    `toml:"max_open_conns"`
 	MaxIdleConns           int    `toml:"max_idle_conns"`
 	ConnMaxLifetimeMinutes int    `toml:"conn_max_lifetime_minutes"`
