@@ -51,8 +51,8 @@ type PaymentOutput struct {
 	VANumber string
 	BankCode entity.BankCode
 	// QRIS-specific
-	QRString   string
-	QRImageURL string
+	QRString    string
+	QRImageURL  string
 	ExpiryAt    time.Time
 	PaidAt      *time.Time
 	CancelledAt *time.Time
