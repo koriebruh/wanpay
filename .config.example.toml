@@ -15,9 +15,13 @@ max_body_size           = "1M"
 cors_allow_origins = ["http://localhost:3000", "http://localhost:5173"]
 
 [database]
-dsn            = "postgres://postgres:postgres@localhost:5432/wanpey?sslmode=disable"
-max_open_conns = 25
-max_idle_conns = 10
+# Connect via PgBouncer (port 6432), not directly to Postgres (5432).
+# PgBouncer uses transaction pooling — keep max_open_conns low per instance
+# (PgBouncer handles multiplexing; default_pool_size in pgbouncer.ini is the
+# real Postgres connection limit).
+dsn            = "postgres://postgres:postgres@localhost:6432/wanpey?sslmode=disable"
+max_open_conns = 20
+max_idle_conns = 5
 conn_max_lifetime_minutes = 5
 
 [redis]

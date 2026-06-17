@@ -1,0 +1,2 @@
+; local dev only — plaintext password, PgBouncer computes MD5 internally
+"postgres" "postgres"

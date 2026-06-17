@@ -80,9 +80,9 @@ vet:
 lint:
 	golangci-lint run ./...
 
-## infra-up: start postgres + redis + jaeger via docker compose
+## infra-up: start postgres + pgbouncer + redis + jaeger via docker compose
 infra-up:
-	docker compose up -d postgres redis jaeger
+	docker compose up -d postgres pgbouncer redis jaeger
 
 ## infra-down: stop all infra containers
 infra-down:
