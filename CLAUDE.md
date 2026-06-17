@@ -93,6 +93,29 @@ Workers must never query the DB after stage 4 starts — always check `ctx.Done(
 
 **PII** (`pkg/mask/`): always wrap sensitive fields with `mask.Card`, `mask.Email`, `mask.Phone`, `mask.Name`, `mask.Secret` before passing to `zap.String`.
 
+## Business Model: PayFac / Aggregator
+
+Wanpey uses the **Payment Facilitator** model:
+- Wanpey holds **one account per provider** (Midtrans, Xendit, DOKU) — all merchant payments flow into Wanpey's provider accounts
+- Merchant balances are tracked in the **internal `Mutation` ledger**, not at the provider level
+- Cash-out (disbursement) is sent from Wanpey's provider balance to the merchant's registered bank account
+- Merchants are never exposed to provider accounts — switching or adding providers is invisible to them
+
+**Fee structure** (FeeBearer is always merchant — never customer):
+- `entity.FeeConfig` = per-merchant contracted fee (VA flat, QRIS %, Disbursement flat)
+- `config.FeeConfig.Margin` = platform-wide Wanpey margin added on top, toggled via `[fee.margin] enabled`
+- Effective fee = merchant FeeConfig + platform margin (if enabled)
+- Net settlement = paid amount − effective fee → recorded as `Mutation.Amount`
+
+## Merchant Entity
+
+Key design decisions:
+- `APIKey` stored as SHA256 hash in DB. Format: `wpay_live_<32chars>` or `wpay_test_<32chars>`. Raw key shown once at creation/regeneration only
+- `WebhookSecret` stored as SHA256 hash. Used to sign outbound webhook payloads via HMAC-SHA256 (`pkg/signature`)
+- Max **3 bank accounts** per merchant (`entity.MaxBankAccounts`). Limit enforced in usecase, not entity
+- `Merchant.Balance` is NOT a stored field — always calculated live via `MutationRepository.GetBalance()`
+- `Merchant.CanTransact()` must return true before any payment can be created for that merchant
+
 ## Migrations
 
 Format: `migrations/NNNNNN_name.up.sql` / `.down.sql` (golang-migrate v4). Run `make migrate-up` from project root — the `file://migrations` source path is relative to CWD.

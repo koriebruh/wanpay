@@ -15,6 +15,7 @@ type Config struct {
 	Logger   LoggerConfig   `toml:"logger"`
 	Provider ProviderConfig `toml:"provider"`
 	OTEL     OTELConfig     `toml:"otel"`
+	Fee      FeeConfig      `toml:"fee"`
 }
 
 type OTELConfig struct {
@@ -84,6 +85,30 @@ type XenditConfig struct {
 type DokuConfig struct {
 	ClientID  string `toml:"client_id"`
 	SecretKey string `toml:"secret_key"`
+}
+
+// FeeConfig holds platform-wide margin settings applied on top of each merchant's FeeConfig.
+// This is Wanpey's revenue layer — separate from what merchants are individually contracted to pay.
+type FeeConfig struct {
+	Margin MarginConfig `toml:"margin"`
+}
+
+// MarginConfig is the platform margin added to every transaction when Enabled = true.
+// The margin is deducted from the merchant's settlement (FeeBearer is always merchant).
+// Per-method config allows different margin types for VA (typically flat) vs QRIS (typically %).
+type MarginConfig struct {
+	Enabled      bool         `toml:"enabled"`
+	VA           MethodMargin `toml:"va"`
+	QRIS         MethodMargin `toml:"qris"`
+	Disbursement MethodMargin `toml:"disbursement"`
+}
+
+// MethodMargin defines the platform margin for a single payment method.
+// Type must be "flat" or "percentage". Only the field matching Type is used.
+type MethodMargin struct {
+	Type       string  `toml:"type"`       // "flat" | "percentage"
+	FlatIDR    int64   `toml:"flat_idr"`   // used when Type = "flat"
+	Percentage float64 `toml:"percentage"` // e.g. 0.3 = 0.3%, used when Type = "percentage"
 }
 
 // Provide registers Config as a lazy singleton in the DI injector.

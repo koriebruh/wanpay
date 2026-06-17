@@ -47,3 +47,24 @@ enabled      = true              # false = no-op tracer, tidak ada koneksi ke Ja
 endpoint     = "localhost:4317"  # Jaeger OTLP gRPC
 service_name = "wanpey"
 sample_ratio = 1.0               # 1.0 = 100% dev; production: 0.1 (10%)
+
+# Platform margin — Wanpey's revenue on top of each merchant's contracted fee.
+# Deducted from merchant settlement (fee bearer is always merchant).
+# Set enabled = false to pass through provider cost only (no platform markup).
+[fee.margin]
+enabled = false
+
+[fee.margin.va]
+type     = "flat"  # "flat" | "percentage"
+flat_idr = 500     # IDR 500 per VA transaction
+percentage = 0.0   # unused when type = "flat"
+
+[fee.margin.qris]
+type       = "percentage"
+flat_idr   = 0
+percentage = 0.3   # 0.3% per QRIS transaction (on top of merchant's QRIS fee)
+
+[fee.margin.disbursement]
+type     = "flat"
+flat_idr = 1000    # IDR 1.000 per disbursement
+percentage = 0.0
