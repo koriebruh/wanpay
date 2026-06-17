@@ -39,8 +39,6 @@ func buildEcho(cfg *config.Config, log *zap.Logger) *echo.Echo {
 		},
 	}))
 
-	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(20)))
-
 	// Reject oversized request bodies before they hit handlers.
 	bodyLimit := cfg.App.HTTP.MaxBodySize
 	if bodyLimit == "" {

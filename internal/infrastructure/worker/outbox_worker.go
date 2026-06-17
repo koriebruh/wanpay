@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -19,10 +20,11 @@ import (
 )
 
 const (
-	outboxPollInterval = 5 * time.Second
-	outboxHTTPTimeout  = 10 * time.Second
-	outboxClaimLease   = 60 * time.Second
-	outboxMaxErrLen    = 500
+	outboxPollInterval  = 5 * time.Second
+	outboxHTTPTimeout   = 10 * time.Second
+	outboxClaimLease    = 60 * time.Second
+	outboxMaxErrLen     = 500
+	outboxMaxConcurrent = 5  // max parallel webhook deliveries per batch
 )
 
 type outboxRow struct {
@@ -76,9 +78,22 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 		w.log.Error("outbox: fetch pending failed", zap.Error(err))
 		return
 	}
-	for _, row := range rows {
-		w.deliver(ctx, row)
+	if len(rows) == 0 {
+		return
 	}
+
+	sem := make(chan struct{}, outboxMaxConcurrent)
+	var wg sync.WaitGroup
+	for _, row := range rows {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(r outboxRow) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			w.deliver(ctx, r)
+		}(row)
+	}
+	wg.Wait()
 }
 
 // fetchAndClaim atomically claims up to 10 pending rows by advancing next_retry_at by
@@ -126,9 +141,15 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 		zap.Int("attempt", row.Attempt+1),
 	)
 
+	// dbCtx is intentionally decoupled from ctx so that DB status updates
+	// succeed even when the parent ctx is cancelled (e.g. during graceful shutdown).
+	// A 5-second deadline is enough for a simple UPDATE.
+	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	if err := validateWebhookURL(row.TargetURL); err != nil {
 		log.Error("outbox: invalid target_url, marking failed", zap.Error(err))
-		if markErr := w.markFailed(ctx, row.ID, err.Error()); markErr != nil {
+		if markErr := w.markFailed(dbCtx, row.ID, err.Error()); markErr != nil {
 			log.Error("outbox: mark failed error", zap.Error(markErr))
 		}
 		return
@@ -136,7 +157,7 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 
 	err := w.post(ctx, row.TargetURL, row.Payload)
 	if err == nil {
-		if updateErr := w.markDelivered(ctx, row.ID); updateErr != nil {
+		if updateErr := w.markDelivered(dbCtx, row.ID); updateErr != nil {
 			log.Error("outbox: mark delivered failed", zap.Error(updateErr))
 		} else {
 			log.Info("outbox: webhook delivered")
@@ -148,7 +169,7 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 
 	nextAttempt := row.Attempt + 1
 	if nextAttempt >= row.Max {
-		if markErr := w.markFailed(ctx, row.ID, truncate(err.Error(), outboxMaxErrLen)); markErr != nil {
+		if markErr := w.markFailed(dbCtx, row.ID, truncate(err.Error(), outboxMaxErrLen)); markErr != nil {
 			log.Error("outbox: mark failed error", zap.Error(markErr))
 		}
 		log.Error("outbox: max attempts reached, giving up", zap.Int("max_attempts", row.Max))
@@ -156,7 +177,7 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 	}
 
 	nextRetry := backoff(nextAttempt)
-	if schedErr := w.scheduleRetry(ctx, row.ID, nextAttempt, truncate(err.Error(), outboxMaxErrLen), nextRetry); schedErr != nil {
+	if schedErr := w.scheduleRetry(dbCtx, row.ID, nextAttempt, truncate(err.Error(), outboxMaxErrLen), nextRetry); schedErr != nil {
 		log.Error("outbox: schedule retry failed", zap.Error(schedErr))
 	}
 }
