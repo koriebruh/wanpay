@@ -1,4 +1,4 @@
-package database
+package postgres
 
 import (
 	"context"
@@ -14,9 +14,10 @@ import (
 	"go.uber.org/zap"
 
 	"wanpey/core/internal/infrastructure/config"
+	"wanpey/core/internal/infrastructure/database"
 )
 
-// postgresDB wraps *sql.DB and implements DB + do.Shutdownable.
+// postgresDB wraps *sql.DB and implements database.SQLDB + do.Shutdownable.
 type postgresDB struct {
 	*sql.DB
 }
@@ -26,10 +27,10 @@ func (p *postgresDB) Shutdown() error {
 	return p.DB.Close()
 }
 
-// ProvideDB registers SQLDB in the DI container backed by Postgres.
-// To switch engines, swap this provider — all application code stays unchanged.
+// ProvideDB registers database.SQLDB in the DI container backed by Postgres.
+// To swap the RDBMS, replace only this file — all repos and usecases stay unchanged.
 func ProvideDB(i do.Injector) {
-	do.Provide(i, func(i do.Injector) (SQLDB, error) {
+	do.Provide(i, func(i do.Injector) (database.SQLDB, error) {
 		cfg := do.MustInvoke[*config.Config](i)
 		log := do.MustInvoke[*zap.Logger](i)
 		return newPostgres(cfg.Database, log)
@@ -50,12 +51,9 @@ func newPostgres(cfg config.DatabaseConfig, log *zap.Logger) (*postgresDB, error
 		cfg.MaxIdleConns = cfg.MaxOpenConns
 	}
 
-	// otelsql wraps the driver so every query emits a span automatically.
 	db, err := otelsql.Open("postgres", cfg.DSN,
 		otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
-		otelsql.WithSpanOptions(otelsql.SpanOptions{
-			DisableErrSkip: true,
-		}),
+		otelsql.WithSpanOptions(otelsql.SpanOptions{DisableErrSkip: true}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("open postgres: %w", err)
@@ -72,7 +70,6 @@ func newPostgres(cfg config.DatabaseConfig, log *zap.Logger) (*postgresDB, error
 		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 
-	// Register connection pool metrics so Jaeger/Prometheus can observe pool saturation.
 	if _, err := otelsql.RegisterDBStatsMetrics(db, otelsql.WithAttributes(semconv.DBSystemPostgreSQL)); err != nil {
 		log.Warn("failed to register db stats metrics", zap.Error(err))
 	}

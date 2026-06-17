@@ -1,5 +1,6 @@
 .PHONY: run dev build daemon-start daemon-stop daemon-status \
         migrate-up migrate-down migrate-status \
+        sqlc \
         test lint tidy vet infra-up infra-down infra-logs docker-build \
         install-hooks install-tools
 
@@ -57,6 +58,11 @@ install-tools:
 	go install github.com/cweill/gotests/gotests@latest
 	go install golang.org/x/tools/cmd/stringer@latest
 	go install github.com/fatih/gomodifytags@latest
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+
+## sqlc: regenerate type-safe Go from SQL queries (run after editing query/*.sql)
+sqlc:
+	sqlc generate
 
 ## tidy: clean up go.mod and go.sum
 tidy:

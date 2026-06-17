@@ -1,0 +1,183 @@
+package postgres
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"wanpey/core/internal/domain/entity"
+	"wanpey/core/internal/domain/repository"
+	"wanpey/core/internal/infrastructure/database"
+	"wanpey/core/internal/infrastructure/database/postgres/gen"
+	"wanpey/core/pkg/apperror"
+)
+
+type merchantRepo struct {
+	db database.SQLDB
+	q  *gen.Queries
+}
+
+func NewMerchantRepo(db database.SQLDB) repository.MerchantRepository {
+	return &merchantRepo{db: db, q: gen.New(db)}
+}
+
+func (r *merchantRepo) queries(ctx context.Context) *gen.Queries {
+	if tx := database.TxFromContext(ctx); tx != nil {
+		return r.q.WithTx(tx)
+	}
+	return r.q
+}
+
+func (r *merchantRepo) Save(ctx context.Context, m *entity.Merchant) error {
+	feeJSON, err := json.Marshal(m.FeeConfig)
+	if err != nil {
+		return fmt.Errorf("marshal fee_config: %w", err)
+	}
+	row, err := r.queries(ctx).InsertMerchant(ctx, gen.InsertMerchantParams{
+		Name:          m.Name,
+		Email:         m.Email,
+		Phone:         m.Phone,
+		Status:        string(m.Status),
+		ApiKey:        m.APIKey,
+		WebhookUrl:    m.WebhookURL,
+		WebhookSecret: m.WebhookSecret,
+		FeeConfig:     feeJSON,
+	})
+	if err != nil {
+		return fmt.Errorf("insert merchant: %w", err)
+	}
+	m.ID = row.ID
+	m.CreatedAt = row.CreatedAt
+	m.UpdatedAt = row.UpdatedAt
+	return nil
+}
+
+func (r *merchantRepo) FindByID(ctx context.Context, id string) (*entity.Merchant, error) {
+	row, err := r.queries(ctx).GetMerchantByID(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, apperror.NotFound("merchant %s not found", id)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get merchant by id: %w", err)
+	}
+	return toEntityMerchant(row), nil
+}
+
+func (r *merchantRepo) FindByAPIKey(ctx context.Context, hashedKey string) (*entity.Merchant, error) {
+	row, err := r.queries(ctx).GetMerchantByAPIKey(ctx, hashedKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, apperror.NotFound("merchant not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get merchant by api_key: %w", err)
+	}
+	return toEntityMerchant(row), nil
+}
+
+func (r *merchantRepo) FindByEmail(ctx context.Context, email string) (*entity.Merchant, error) {
+	row, err := r.queries(ctx).GetMerchantByEmail(ctx, email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, apperror.NotFound("merchant with email %s not found", email)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get merchant by email: %w", err)
+	}
+	return toEntityMerchant(row), nil
+}
+
+func (r *merchantRepo) Update(ctx context.Context, m *entity.Merchant) error {
+	feeJSON, err := json.Marshal(m.FeeConfig)
+	if err != nil {
+		return fmt.Errorf("marshal fee_config: %w", err)
+	}
+	row, err := r.queries(ctx).UpdateMerchant(ctx, gen.UpdateMerchantParams{
+		ID:            m.ID,
+		Name:          m.Name,
+		Email:         m.Email,
+		Phone:         m.Phone,
+		Status:        string(m.Status),
+		ApiKey:        m.APIKey,
+		WebhookUrl:    m.WebhookURL,
+		WebhookSecret: m.WebhookSecret,
+		FeeConfig:     feeJSON,
+	})
+	if err != nil {
+		return fmt.Errorf("update merchant: %w", err)
+	}
+	m.UpdatedAt = row.UpdatedAt
+	return nil
+}
+
+func (r *merchantRepo) SaveBankAccount(ctx context.Context, a *entity.MerchantBankAccount) error {
+	row, err := r.queries(ctx).InsertBankAccount(ctx, gen.InsertBankAccountParams{
+		MerchantID:    a.MerchantID,
+		BankCode:      string(a.BankCode),
+		AccountNumber: a.AccountNumber,
+		AccountName:   a.AccountName,
+		IsPrimary:     a.IsPrimary,
+		IsVerified:    a.IsVerified,
+	})
+	if err != nil {
+		return fmt.Errorf("insert bank account: %w", err)
+	}
+	a.ID = row.ID
+	a.CreatedAt = row.CreatedAt
+	a.UpdatedAt = row.UpdatedAt
+	return nil
+}
+
+func (r *merchantRepo) FindBankAccountsByMerchantID(ctx context.Context, merchantID string) ([]*entity.MerchantBankAccount, error) {
+	rows, err := r.queries(ctx).ListBankAccountsByMerchant(ctx, merchantID)
+	if err != nil {
+		return nil, fmt.Errorf("list bank accounts: %w", err)
+	}
+	result := make([]*entity.MerchantBankAccount, len(rows))
+	for i, b := range rows {
+		result[i] = toEntityBankAccount(b)
+	}
+	return result, nil
+}
+
+func (r *merchantRepo) FindPrimaryBankAccount(ctx context.Context, merchantID string) (*entity.MerchantBankAccount, error) {
+	row, err := r.queries(ctx).GetPrimaryBankAccount(ctx, merchantID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, apperror.NotFound("no primary bank account for merchant %s", merchantID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get primary bank account: %w", err)
+	}
+	return toEntityBankAccount(row), nil
+}
+
+func (r *merchantRepo) UpdateBankAccount(ctx context.Context, a *entity.MerchantBankAccount) error {
+	row, err := r.queries(ctx).UpdateBankAccount(ctx, gen.UpdateBankAccountParams{
+		ID:            a.ID,
+		BankCode:      string(a.BankCode),
+		AccountNumber: a.AccountNumber,
+		AccountName:   a.AccountName,
+		IsPrimary:     a.IsPrimary,
+		IsVerified:    a.IsVerified,
+	})
+	if err != nil {
+		return fmt.Errorf("update bank account: %w", err)
+	}
+	a.UpdatedAt = row.UpdatedAt
+	return nil
+}
+
+func (r *merchantRepo) DeleteBankAccount(ctx context.Context, accountID string) error {
+	if err := r.queries(ctx).DeleteBankAccount(ctx, accountID); err != nil {
+		return fmt.Errorf("delete bank account: %w", err)
+	}
+	return nil
+}
+
+func (r *merchantRepo) CountBankAccounts(ctx context.Context, merchantID string) (int, error) {
+	n, err := r.queries(ctx).CountBankAccounts(ctx, merchantID)
+	if err != nil {
+		return 0, fmt.Errorf("count bank accounts: %w", err)
+	}
+	return int(n), nil
+}

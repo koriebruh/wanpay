@@ -21,7 +21,9 @@ type ListDisbursementFilter struct {
 type DisbursementRepository interface {
 	Save(ctx context.Context, disbursement *entity.Disbursement) error
 	FindByID(ctx context.Context, id string) (*entity.Disbursement, error)
-	FindByExternalID(ctx context.Context, externalID string) (*entity.Disbursement, error)
+	// FindByExternalID looks up a disbursement by provider + externalID.
+	// Both are required because the unique constraint is (provider, external_id).
+	FindByExternalID(ctx context.Context, provider entity.Provider, externalID string) (*entity.Disbursement, error)
 	Update(ctx context.Context, disbursement *entity.Disbursement) error
 	List(ctx context.Context, filter ListDisbursementFilter) ([]*entity.Disbursement, int64, error)
 }

@@ -21,7 +21,9 @@ type ListMutationFilter struct {
 type MutationRepository interface {
 	Save(ctx context.Context, mutation *entity.Mutation) error
 	FindByID(ctx context.Context, id string) (*entity.Mutation, error)
-	FindByReferenceID(ctx context.Context, referenceID string) (*entity.Mutation, error)
+	// FindByReferenceID looks up a mutation by referenceID + referenceType.
+	// Both are required because the unique constraint is (reference_id, reference_type).
+	FindByReferenceID(ctx context.Context, referenceID string, refType entity.MutationReferenceType) (*entity.Mutation, error)
 	List(ctx context.Context, filter ListMutationFilter) ([]*entity.Mutation, int64, error)
 
 	// GetBalance returns the current net balance for a merchant in IDR.
