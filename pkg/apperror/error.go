@@ -6,9 +6,9 @@ import (
 )
 
 type AppError struct {
-	Code    int          `json:"-"`
-	Message string       `json:"message"`
-	Details []FieldError `json:"details,omitempty"`
+	httpCode int
+	Message  string       `json:"message"`
+	Details  []FieldError `json:"details,omitempty"`
 }
 
 type FieldError struct {
@@ -16,40 +16,40 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
-func (e *AppError) Error() string { return e.Message }
+func (e *AppError) Error() string     { return e.Message }
+func (e *AppError) HTTPCode() int     { return e.httpCode }
 
-// WithDetails attaches field-level validation errors to the response.
 func (e *AppError) WithDetails(details ...FieldError) *AppError {
 	e.Details = append(e.Details, details...)
 	return e
 }
 
 func BadRequest(format string, args ...any) *AppError {
-	return &AppError{Code: http.StatusBadRequest, Message: fmt.Sprintf(format, args...)}
+	return &AppError{httpCode: http.StatusBadRequest, Message: fmt.Sprintf(format, args...)}
 }
 
 func Unauthorized(format string, args ...any) *AppError {
-	return &AppError{Code: http.StatusUnauthorized, Message: fmt.Sprintf(format, args...)}
+	return &AppError{httpCode: http.StatusUnauthorized, Message: fmt.Sprintf(format, args...)}
 }
 
 func Forbidden(format string, args ...any) *AppError {
-	return &AppError{Code: http.StatusForbidden, Message: fmt.Sprintf(format, args...)}
+	return &AppError{httpCode: http.StatusForbidden, Message: fmt.Sprintf(format, args...)}
 }
 
 func NotFound(format string, args ...any) *AppError {
-	return &AppError{Code: http.StatusNotFound, Message: fmt.Sprintf(format, args...)}
+	return &AppError{httpCode: http.StatusNotFound, Message: fmt.Sprintf(format, args...)}
 }
 
 func Conflict(format string, args ...any) *AppError {
-	return &AppError{Code: http.StatusConflict, Message: fmt.Sprintf(format, args...)}
+	return &AppError{httpCode: http.StatusConflict, Message: fmt.Sprintf(format, args...)}
 }
 
 func UnprocessableEntity(format string, args ...any) *AppError {
-	return &AppError{Code: http.StatusUnprocessableEntity, Message: fmt.Sprintf(format, args...)}
+	return &AppError{httpCode: http.StatusUnprocessableEntity, Message: fmt.Sprintf(format, args...)}
 }
 
 func Internal(format string, args ...any) *AppError {
-	return &AppError{Code: http.StatusInternalServerError, Message: fmt.Sprintf(format, args...)}
+	return &AppError{httpCode: http.StatusInternalServerError, Message: fmt.Sprintf(format, args...)}
 }
 
 func Is(err error) (*AppError, bool) {

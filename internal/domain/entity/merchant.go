@@ -24,18 +24,15 @@ const MaxBankAccounts = 3
 // MethodFee defines the fee charged to the merchant for a single payment method.
 // FeeBearer is always merchant — the fee is deducted from the settlement amount.
 type MethodFee struct {
-	Type       FeeType
-	Amount     int64   // IDR, used when Type = flat
-	Percentage float64 // e.g. 1.5 = 1.5%, used when Type = percentage
+	Type       FeeType `json:"type"`
+	Amount     int64   `json:"amount"`
+	Percentage float64 `json:"percentage"`
 }
 
-// FeeConfig holds per-method fee rules for a merchant.
-// These are the fees Wanpey charges the merchant on top of provider costs.
-// Platform margin (if enabled in config) is added on top of these values at settlement time.
 type FeeConfig struct {
-	VA           MethodFee
-	QRIS         MethodFee
-	Disbursement MethodFee
+	VA           MethodFee `json:"va"`
+	QRIS         MethodFee `json:"qris"`
+	Disbursement MethodFee `json:"disbursement"`
 }
 
 // MerchantBankAccount is a bank account registered by a merchant for disbursement.

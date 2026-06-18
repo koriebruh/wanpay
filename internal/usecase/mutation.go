@@ -7,42 +7,37 @@ import (
 	"wanpey/core/internal/domain/entity"
 )
 
-// --- Input DTO ---
-
 type ListMutationsInput struct {
-	MerchantID string
-	Type       *entity.MutationType // nil = all types
-	StartDate  *time.Time
-	EndDate    *time.Time
-	Page       int
-	Limit      int
+	MerchantID string                `json:"-"`
+	Type       *entity.MutationType  `json:"type,omitempty"`
+	StartDate  *time.Time            `json:"start_date,omitempty"`
+	EndDate    *time.Time            `json:"end_date,omitempty"`
+	Page       int                   `json:"page"`
+	Limit      int                   `json:"limit"`
 }
 
-// --- Output DTOs ---
-
 type MutationOutput struct {
-	ID          string
-	ReferenceID string // PaymentID or DisbursementID
-	Type        entity.MutationType
-	Amount      int64
-	Currency    entity.Currency
-	Description string
-	CreatedAt   time.Time
+	ID            string              `json:"id"`
+	ReferenceID   string              `json:"reference_id"`
+	ReferenceType entity.MutationReferenceType `json:"reference_type"`
+	Type          entity.MutationType `json:"type"`
+	Amount        int64               `json:"amount"`
+	FeeAmount     int64               `json:"fee_amount"`
+	NetAmount     int64               `json:"net_amount"`
+	Currency      entity.Currency     `json:"currency"`
+	Description   string              `json:"description"`
+	CreatedAt     time.Time           `json:"created_at"`
 }
 
 type MutationListOutput struct {
-	Items []*MutationOutput
-	Total int64
-	Page  int
-	Limit int
+	Items []*MutationOutput `json:"items"`
+	Total int64             `json:"total"`
+	Page  int               `json:"page"`
+	Limit int               `json:"limit"`
 }
 
-// --- Interface ---
-
-// MutationUsecase exposes the immutable ledger of completed cash-in and cash-out events.
-// Mutations cannot be created directly through this usecase — they are produced by
-// PaymentUsecase (on paid) and DisbursementUsecase (on completed).
 type MutationUsecase interface {
 	ListMutations(ctx context.Context, input ListMutationsInput) (*MutationListOutput, error)
 	GetMutation(ctx context.Context, merchantID, mutationID string) (*MutationOutput, error)
+	GetBalance(ctx context.Context, merchantID string) (int64, error)
 }

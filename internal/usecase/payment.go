@@ -7,73 +7,56 @@ import (
 	"wanpey/core/internal/domain/entity"
 )
 
-// --- Input DTOs ---
-
 type CreateVAInput struct {
-	MerchantID    string
-	Provider      entity.Provider
-	BankCode      entity.BankCode
-	Amount        int64
-	Currency      entity.Currency
-	CustomerName  string
-	CustomerEmail string
-	CustomerPhone string
-	Description   string
-	ExpiryAt      time.Time
+	MerchantID    string          `json:"-"`
+	Provider      entity.Provider `json:"provider"       validate:"required,oneof=midtrans xendit doku"`
+	BankCode      entity.BankCode `json:"bank_code"      validate:"required,oneof=BCA BNI BRI BSI MANDIRI PERMATA CIMB"`
+	Amount        int64           `json:"amount"         validate:"required,gt=0"`
+	Currency      entity.Currency `json:"currency"       validate:"required,oneof=IDR"`
+	CustomerName  string          `json:"customer_name"  validate:"required,max=100"`
+	CustomerEmail string          `json:"customer_email" validate:"required,email,max=255"`
+	CustomerPhone string          `json:"customer_phone" validate:"required,min=6,max=20"`
+	Description   string          `json:"description"    validate:"max=255"`
+	ExpiryAt      time.Time       `json:"expiry_at"      validate:"required"`
 }
 
 type CreateQRISInput struct {
-	MerchantID    string
-	Provider      entity.Provider
-	Amount        int64
-	Currency      entity.Currency
-	CustomerName  string
-	CustomerEmail string
-	CustomerPhone string
-	Description   string
-	ExpiryAt      time.Time
+	MerchantID    string          `json:"-"`
+	Provider      entity.Provider `json:"provider"       validate:"required,oneof=midtrans xendit doku"`
+	Amount        int64           `json:"amount"         validate:"required,gt=0"`
+	Currency      entity.Currency `json:"currency"       validate:"required,oneof=IDR"`
+	CustomerName  string          `json:"customer_name"  validate:"required,max=100"`
+	CustomerEmail string          `json:"customer_email" validate:"required,email,max=255"`
+	CustomerPhone string          `json:"customer_phone" validate:"required,min=6,max=20"`
+	Description   string          `json:"description"    validate:"max=255"`
+	ExpiryAt      time.Time       `json:"expiry_at"      validate:"required"`
 }
-
-// --- Output DTO ---
 
 type PaymentOutput struct {
-	ID            string
-	ExternalID    string
-	Method        entity.PaymentMethod
-	Provider      entity.Provider
-	Status        entity.PaymentStatus
-	Amount        int64 // gross amount paid by customer
-	FeeAmount     int64 // fee charged to merchant (0 while pending)
-	Currency      entity.Currency
-	CustomerName  string
-	CustomerEmail string
-	// VA-specific
-	VANumber string
-	BankCode entity.BankCode
-	// QRIS-specific
-	QRString    string
-	QRImageURL  string
-	ExpiryAt    time.Time
-	PaidAt      *time.Time
-	CancelledAt *time.Time
-	CreatedAt   time.Time
+	ID            string               `json:"id"`
+	ExternalID    string               `json:"external_id"`
+	Method        entity.PaymentMethod `json:"method"`
+	Provider      entity.Provider      `json:"provider"`
+	Status        entity.PaymentStatus `json:"status"`
+	Amount        int64                `json:"amount"`
+	FeeAmount     int64                `json:"fee_amount"`
+	Currency      entity.Currency      `json:"currency"`
+	CustomerName  string               `json:"customer_name"`
+	CustomerEmail string               `json:"customer_email"`
+	VANumber      string               `json:"va_number,omitempty"`
+	BankCode      entity.BankCode      `json:"bank_code,omitempty"`
+	QRString      string               `json:"qr_string,omitempty"`
+	QRImageURL    string               `json:"qr_image_url,omitempty"`
+	ExpiryAt      time.Time            `json:"expiry_at"`
+	PaidAt        *time.Time           `json:"paid_at,omitempty"`
+	CancelledAt   *time.Time           `json:"cancelled_at,omitempty"`
+	CreatedAt     time.Time            `json:"created_at"`
 }
 
-// --- Interface ---
-
-// PaymentUsecase handles the lifecycle of a cash-in payment (VA & QRIS).
-//
-// Each mutating method (CreateVA, CreateQRIS, CancelPayment) runs a single DB transaction
-// that includes an outbox insert for reliable webhook delivery to the merchant.
-// Do not wrap these calls in an outer transaction.
 type PaymentUsecase interface {
 	CreateVA(ctx context.Context, input CreateVAInput) (*PaymentOutput, error)
 	CreateQRIS(ctx context.Context, input CreateQRISInput) (*PaymentOutput, error)
 	GetPayment(ctx context.Context, merchantID, paymentID string) (*PaymentOutput, error)
 	CancelPayment(ctx context.Context, merchantID, paymentID string) error
-
-	// HandleWebhook is called by the webhook HTTP handler for each provider's callback.
-	// It verifies the provider signature, updates payment status, inserts a Mutation on
-	// paid status, and queues an outbox event to notify the merchant — all in one transaction.
 	HandleWebhook(ctx context.Context, provider entity.Provider, headers map[string]string, body []byte) error
 }

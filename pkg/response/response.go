@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Meta struct {
-	RequestID  string      `json:"request_id,omitempty"`
+	TraceID    string      `json:"trace_id,omitempty"`
 	Timestamp  string      `json:"timestamp"`
 	Pagination *Pagination `json:"pagination,omitempty"`
 }
@@ -38,10 +39,11 @@ type envelope struct {
 }
 
 func meta(c echo.Context) Meta {
-	return Meta{
-		RequestID: c.Response().Header().Get(echo.HeaderXRequestID),
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+	m := Meta{Timestamp: time.Now().UTC().Format(time.RFC3339Nano)}
+	if span := trace.SpanFromContext(c.Request().Context()); span.SpanContext().IsValid() {
+		m.TraceID = span.SpanContext().TraceID().String()
 	}
+	return m
 }
 
 func OK(c echo.Context, data any) error {

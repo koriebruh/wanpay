@@ -14,6 +14,7 @@ import (
 	"wanpey/core/internal/infrastructure/config"
 	"wanpey/core/pkg/apperror"
 	"wanpey/core/pkg/response"
+	"wanpey/core/pkg/validator"
 )
 
 func ProvideEcho(i do.Injector) {
@@ -28,6 +29,8 @@ func buildEcho(cfg *config.Config, log *zap.Logger) *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
+
+	e.Validator = validator.New()
 
 	e.Use(middleware.Recover())
 	e.Use(otelecho.Middleware(cfg.App.Name))
@@ -141,7 +144,7 @@ func globalErrorHandler(log *zap.Logger, env string) echo.HTTPErrorHandler {
 
 		var ae *apperror.AppError
 		if errors.As(err, &ae) {
-			status = ae.Code
+			status = ae.HTTPCode()
 			message = ae.Message
 			for _, d := range ae.Details {
 				details = append(details, response.FieldDetail{Field: d.Field, Message: d.Message})

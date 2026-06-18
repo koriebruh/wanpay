@@ -7,82 +7,70 @@ import (
 	"wanpey/core/internal/domain/entity"
 )
 
-// --- Input DTOs ---
-
 type CreateMerchantInput struct {
-	Name       string
-	Email      string
-	Phone      string
-	FeeConfig  entity.FeeConfig
-	WebhookURL string
+	Name       string           `json:"name"        validate:"required,max=100"`
+	Email      string           `json:"email"       validate:"required,email,max=255"`
+	Phone      string           `json:"phone"       validate:"max=20"`
+	WebhookURL string           `json:"webhook_url" validate:"omitempty,url,max=500"`
+	FeeConfig  entity.FeeConfig `json:"fee_config"`
 }
 
 type UpdateMerchantInput struct {
-	MerchantID string
-	Name       string
-	Email      string
-	Phone      string
-	WebhookURL string
-	FeeConfig  entity.FeeConfig
+	MerchantID string           `json:"-"`
+	Name       string           `json:"name"        validate:"max=100"`
+	Email      string           `json:"email"       validate:"omitempty,email,max=255"`
+	Phone      string           `json:"phone"       validate:"max=20"`
+	WebhookURL string           `json:"webhook_url" validate:"omitempty,url,max=500"`
+	FeeConfig  entity.FeeConfig `json:"fee_config"`
 }
 
 type AddBankAccountInput struct {
-	MerchantID    string
-	BankCode      entity.BankCode
-	AccountNumber string
-	AccountName   string
-	SetAsPrimary  bool
+	MerchantID    string          `json:"-"`
+	BankCode      entity.BankCode `json:"bank_code"       validate:"required,oneof=BCA BNI BRI BSI MANDIRI PERMATA CIMB"`
+	AccountNumber string          `json:"account_number"  validate:"required,min=5,max=20"`
+	AccountName   string          `json:"account_name"    validate:"required,max=100"`
+	SetAsPrimary  bool            `json:"set_as_primary"`
 }
 
-// --- Output DTOs ---
-
 type CreateMerchantOutput struct {
-	ID            string
-	Name          string
-	Status        entity.MerchantStatus
-	APIKey        string // raw key — shown once, never retrievable again
-	WebhookSecret string // raw secret — shown once, never retrievable again
-	CreatedAt     time.Time
+	ID            string                `json:"id"`
+	Name          string                `json:"name"`
+	Status        entity.MerchantStatus `json:"status"`
+	APIKey        string                `json:"api_key"`
+	WebhookSecret string                `json:"webhook_secret"`
+	CreatedAt     time.Time             `json:"created_at"`
 }
 
 type MerchantOutput struct {
-	ID         string
-	Name       string
-	Email      string
-	Phone      string
-	Status     entity.MerchantStatus
-	FeeConfig  entity.FeeConfig
-	WebhookURL string
-	Balance    int64 // IDR, live balance from mutation ledger
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID         string                `json:"id"`
+	Name       string                `json:"name"`
+	Email      string                `json:"email"`
+	Phone      string                `json:"phone"`
+	Status     entity.MerchantStatus `json:"status"`
+	FeeConfig  entity.FeeConfig      `json:"fee_config"`
+	WebhookURL string                `json:"webhook_url"`
+	Balance    int64                 `json:"balance"`
+	CreatedAt  time.Time             `json:"created_at"`
+	UpdatedAt  time.Time             `json:"updated_at"`
 }
 
 type BankAccountOutput struct {
-	ID            string
-	BankCode      entity.BankCode
-	AccountNumber string
-	AccountName   string
-	IsPrimary     bool
-	CreatedAt     time.Time
+	ID            string          `json:"id"`
+	BankCode      entity.BankCode `json:"bank_code"`
+	AccountNumber string          `json:"account_number"`
+	AccountName   string          `json:"account_name"`
+	IsPrimary     bool            `json:"is_primary"`
+	IsVerified    bool            `json:"is_verified"`
+	CreatedAt     time.Time       `json:"created_at"`
 }
 
-// --- Interface ---
-
-// MerchantUsecase manages merchant onboarding, credentials, and bank accounts.
 type MerchantUsecase interface {
 	Create(ctx context.Context, input CreateMerchantInput) (*CreateMerchantOutput, error)
 	GetMerchant(ctx context.Context, id string) (*MerchantOutput, error)
 	Update(ctx context.Context, input UpdateMerchantInput) (*MerchantOutput, error)
 	Suspend(ctx context.Context, merchantID string) error
 	Activate(ctx context.Context, merchantID string) error
-
-	// RegenerateAPIKey invalidates the current key immediately and returns the new raw key.
-	// New key format: wpay_live_<32 random chars> | wpay_test_<32 random chars>.
-	// Caller must securely deliver the new key to the merchant — it cannot be retrieved again.
 	RegenerateAPIKey(ctx context.Context, merchantID string) (rawKey string, err error)
-
-	// Bank account management — max entity.MaxBankAccounts accounts per merchant.
 	AddBankAccount(ctx context.Context, input AddBankAccountInput) (*BankAccountOutput, error)
 	ListBankAccounts(ctx context.Context, merchantID string) ([]*BankAccountOutput, error)
 	RemoveBankAccount(ctx context.Context, merchantID, accountID string) error
