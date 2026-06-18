@@ -1,7 +1,8 @@
 .PHONY: run dev build daemon-start daemon-stop daemon-status \
         migrate-up migrate-down migrate-status \
         sqlc \
-        test lint tidy vet infra-up infra-down infra-logs docker-build \
+        test test-unit test-integration \
+        lint tidy vet infra-up infra-down infra-logs docker-build \
         install-hooks install-tools
 
 APP_NAME = wanpey
@@ -72,9 +73,17 @@ sqlc:
 tidy:
 	go mod tidy
 
-## test: run all tests with race detector
+## test: run unit tests only (default, no network calls)
 test:
-	go test ./... -v -race
+	go test -race -count=1 ./...
+
+## test-unit: same as test — explicit alias
+test-unit:
+	go test -race -count=1 ./...
+
+## test-integration: run integration tests (requires .config.toml with real credentials)
+test-integration:
+	CONFIG_PATH=$(PWD)/.config.toml go test -race -count=1 -tags integration -v ./...
 
 ## vet: run static analysis
 vet:
