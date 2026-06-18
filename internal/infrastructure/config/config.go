@@ -67,17 +67,17 @@ type LoggerConfig struct {
 }
 
 type ProviderConfig struct {
-	Midtrans       MidtransConfig      `toml:"midtrans"`
-	Xendit         XenditConfig        `toml:"xendit"`
-	Doku           DokuConfig          `toml:"doku"`
+	Midtrans       MidtransConfig       `toml:"midtrans"`
+	Xendit         XenditConfig         `toml:"xendit"`
+	Doku           DokuConfig           `toml:"doku"`
 	CircuitBreaker CircuitBreakerConfig `toml:"circuit_breaker"`
 }
 
 type CircuitBreakerConfig struct {
-	MaxRequests          uint32 `toml:"max_requests"`           // max requests in half-open state
-	IntervalSeconds      int    `toml:"interval_seconds"`       // rolling window for failure counting
-	TimeoutSeconds       int    `toml:"timeout_seconds"`        // seconds to stay open before half-open
-	ConsecutiveFailures  uint32 `toml:"consecutive_failures"`   // failures before opening
+	MaxRequests         uint32 `toml:"max_requests"`         // max requests in half-open state
+	IntervalSeconds     int    `toml:"interval_seconds"`     // rolling window for failure counting
+	TimeoutSeconds      int    `toml:"timeout_seconds"`      // seconds to stay open before half-open
+	ConsecutiveFailures uint32 `toml:"consecutive_failures"` // failures before opening
 }
 
 type MidtransConfig struct {

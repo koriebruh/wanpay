@@ -16,8 +16,8 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
-func (e *AppError) Error() string     { return e.Message }
-func (e *AppError) HTTPCode() int     { return e.httpCode }
+func (e *AppError) Error() string { return e.Message }
+func (e *AppError) HTTPCode() int { return e.httpCode }
 
 func (e *AppError) WithDetails(details ...FieldError) *AppError {
 	e.Details = append(e.Details, details...)

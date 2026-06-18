@@ -8,14 +8,14 @@ import (
 )
 
 type DisburseInput struct {
-	MerchantID    string                `json:"-"`
-	Provider      entity.Provider       `json:"provider"        validate:"required,oneof=xendit doku"`
-	BankCode      entity.BankCode       `json:"bank_code"       validate:"required,oneof=BCA BNI BRI BSI MANDIRI PERMATA CIMB"`
-	AccountNumber string                `json:"account_number"  validate:"required,min=5,max=20"`
-	AccountName   string                `json:"account_name"    validate:"required,max=100"`
-	Amount        int64                 `json:"amount"          validate:"required,gt=0"`
-	Currency      entity.Currency       `json:"currency"        validate:"required,oneof=IDR"`
-	Description   string                `json:"description"     validate:"max=255"`
+	MerchantID    string          `json:"-"`
+	Provider      entity.Provider `json:"provider"        validate:"required,oneof=xendit doku"`
+	BankCode      entity.BankCode `json:"bank_code"       validate:"required,oneof=BCA BNI BRI BSI MANDIRI PERMATA CIMB"`
+	AccountNumber string          `json:"account_number"  validate:"required,min=5,max=20"`
+	AccountName   string          `json:"account_name"    validate:"required,max=100"`
+	Amount        int64           `json:"amount"          validate:"required,gt=0"`
+	Currency      entity.Currency `json:"currency"        validate:"required,oneof=IDR"`
+	Description   string          `json:"description"     validate:"max=255"`
 }
 
 type DisbursementOutput struct {

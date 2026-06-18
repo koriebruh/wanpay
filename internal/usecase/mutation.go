@@ -8,25 +8,25 @@ import (
 )
 
 type ListMutationsInput struct {
-	MerchantID string                `json:"-"`
-	Type       *entity.MutationType  `json:"type,omitempty"`
-	StartDate  *time.Time            `json:"start_date,omitempty"`
-	EndDate    *time.Time            `json:"end_date,omitempty"`
-	Page       int                   `json:"page"`
-	Limit      int                   `json:"limit"`
+	MerchantID string               `json:"-"`
+	Type       *entity.MutationType `json:"type,omitempty"`
+	StartDate  *time.Time           `json:"start_date,omitempty"`
+	EndDate    *time.Time           `json:"end_date,omitempty"`
+	Page       int                  `json:"page"`
+	Limit      int                  `json:"limit"`
 }
 
 type MutationOutput struct {
-	ID            string              `json:"id"`
-	ReferenceID   string              `json:"reference_id"`
+	ID            string                       `json:"id"`
+	ReferenceID   string                       `json:"reference_id"`
 	ReferenceType entity.MutationReferenceType `json:"reference_type"`
-	Type          entity.MutationType `json:"type"`
-	Amount        int64               `json:"amount"`
-	FeeAmount     int64               `json:"fee_amount"`
-	NetAmount     int64               `json:"net_amount"`
-	Currency      entity.Currency     `json:"currency"`
-	Description   string              `json:"description"`
-	CreatedAt     time.Time           `json:"created_at"`
+	Type          entity.MutationType          `json:"type"`
+	Amount        int64                        `json:"amount"`
+	FeeAmount     int64                        `json:"fee_amount"`
+	NetAmount     int64                        `json:"net_amount"`
+	Currency      entity.Currency              `json:"currency"`
+	Description   string                       `json:"description"`
+	CreatedAt     time.Time                    `json:"created_at"`
 }
 
 type MutationListOutput struct {

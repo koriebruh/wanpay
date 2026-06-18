@@ -66,7 +66,7 @@ func run[T any](b *Breaker, fn func() (T, error)) (T, error) {
 		var zero T
 		return zero, fmt.Errorf("provider %s: %w", b.name, err)
 	}
-	return result.(T), nil //nolint:forcetypeassert
+	return result.(T), nil //nolint:forcetypeassert,errcheck // safe: fn returns T, gobreaker passes it through unchanged
 }
 
 type CBPaymentGateway struct {
@@ -110,8 +110,10 @@ func (g *CBPaymentGateway) ParseWebhook(ctx context.Context, headers map[string]
 	return g.inner.ParseWebhook(ctx, headers, body)
 }
 
-func (g *CBPaymentGateway) SupportedMethods() []entity.PaymentMethod { return g.inner.SupportedMethods() }
-func (g *CBPaymentGateway) ProviderName() entity.Provider            { return g.inner.ProviderName() }
+func (g *CBPaymentGateway) SupportedMethods() []entity.PaymentMethod {
+	return g.inner.SupportedMethods()
+}
+func (g *CBPaymentGateway) ProviderName() entity.Provider { return g.inner.ProviderName() }
 
 type CBDisbursementGateway struct {
 	inner   gateway.DisbursementGateway
