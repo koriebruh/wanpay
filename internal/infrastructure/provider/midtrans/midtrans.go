@@ -64,8 +64,8 @@ func (g *Gateway) CreateVA(ctx context.Context, req gateway.CreateVARequest) (*g
 	}
 
 	vaNumber, billerCode := g.extractVANumber(resp, req.BankCode)
-	expiry, _ := time.Parse("2006-01-02 15:04:05", resp.ExpiryTime)
-	if expiry.IsZero() {
+	expiry, err := time.Parse("2006-01-02 15:04:05", resp.ExpiryTime)
+	if err != nil || expiry.IsZero() {
 		expiry = req.ExpiryAt
 	}
 
@@ -198,7 +198,11 @@ func (g *Gateway) fetchQRString(ctx context.Context, qrURL string) string {
 	}
 	defer resp.Body.Close()
 
-	b, _ := io.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		g.log.Warn("midtrans: read qr response failed", zap.Error(err))
+		return ""
+	}
 
 	var result struct {
 		QRString string `json:"qr_string"`
@@ -247,7 +251,7 @@ func (g *Gateway) ParseWebhook(_ context.Context, _ map[string]string, body []by
 		}
 	}
 
-	grossAmount, _ := strconv.ParseInt(strings.Split(n.GrossAmount, ".")[0], 10, 64)
+	grossAmount, _ := strconv.ParseInt(strings.Split(n.GrossAmount, ".")[0], 10, 64) //nolint:errcheck // GrossAmount from Midtrans is always a valid decimal string
 
 	return &gateway.WebhookEvent{
 		ExternalID: n.OrderID,

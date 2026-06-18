@@ -30,7 +30,6 @@ func newTestGateway(baseURL string) *Gateway {
 	}
 }
 
-
 func TestMapStatus(t *testing.T) {
 	tests := []struct {
 		txStatus    string
@@ -55,7 +54,6 @@ func TestMapStatus(t *testing.T) {
 	}
 }
 
-
 func TestVerifySignature(t *testing.T) {
 	g := newTestGateway("")
 
@@ -74,7 +72,6 @@ func TestVerifySignature(t *testing.T) {
 		t.Error("expected invalid signature to fail")
 	}
 }
-
 
 func TestExtractVANumber(t *testing.T) {
 	g := newTestGateway("")
@@ -98,7 +95,6 @@ func TestExtractVANumber(t *testing.T) {
 	}
 }
 
-
 func TestCreateVA_BCA(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assertBasicAuth(t, r, testServerKey)
@@ -107,10 +103,10 @@ func TestCreateVA_BCA(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(chargeResponse{ //nolint:errcheck
-			StatusCode:  "201",
-			OrderID:     "order-bca-1",
-			ExpiryTime:  "2026-06-19 10:00:00",
-			VANumbers:   []vaNum{{Bank: "bca", VANumber: "8001234567890"}},
+			StatusCode: "201",
+			OrderID:    "order-bca-1",
+			ExpiryTime: "2026-06-19 10:00:00",
+			VANumbers:  []vaNum{{Bank: "bca", VANumber: "8001234567890"}},
 		})
 	}))
 	defer srv.Close()
@@ -194,7 +190,6 @@ func TestCreateVA_APIError(t *testing.T) {
 	}
 }
 
-
 func TestCreateQRIS(t *testing.T) {
 	qrFetched := false
 	var srvURL string
@@ -242,7 +237,6 @@ func TestCreateQRIS(t *testing.T) {
 	}
 }
 
-
 func TestGetStatus(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v2/order-abc/status" {
@@ -267,7 +261,6 @@ func TestGetStatus(t *testing.T) {
 	}
 }
 
-
 func TestCancelPayment(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v2/order-xyz/cancel" || r.Method != http.MethodPost {
@@ -284,7 +277,6 @@ func TestCancelPayment(t *testing.T) {
 	}
 }
 
-
 func TestParseWebhook_ValidSignature(t *testing.T) {
 	g := newTestGateway("")
 
@@ -296,7 +288,7 @@ func TestParseWebhook_ValidSignature(t *testing.T) {
 	h.Write([]byte(orderID + statusCode + grossAmount + testServerKey))
 	sig := hex.EncodeToString(h.Sum(nil))
 
-	body, _ := json.Marshal(notification{
+	body, _ := json.Marshal(notification{ //nolint:errcheck
 		OrderID:           orderID,
 		TransactionStatus: "settlement",
 		FraudStatus:       "accept",
@@ -324,7 +316,7 @@ func TestParseWebhook_ValidSignature(t *testing.T) {
 func TestParseWebhook_InvalidSignature(t *testing.T) {
 	g := newTestGateway("")
 
-	body, _ := json.Marshal(notification{
+	body, _ := json.Marshal(notification{ //nolint:errcheck
 		OrderID:           "order-1",
 		TransactionStatus: "settlement",
 		FraudStatus:       "accept",
@@ -338,7 +330,6 @@ func TestParseWebhook_InvalidSignature(t *testing.T) {
 		t.Error("expected error for invalid signature")
 	}
 }
-
 
 func assertBasicAuth(t *testing.T, r *http.Request, serverKey string) {
 	t.Helper()

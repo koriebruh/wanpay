@@ -7,7 +7,7 @@ import (
 	"wanpey/core/internal/domain/entity"
 )
 
-//  Cash In (VA & QRIS) 
+// Cash In (VA & QRIS)
 type CreateVARequest struct {
 	ExternalID    string
 	BankCode      entity.BankCode
@@ -21,12 +21,12 @@ type CreateVARequest struct {
 }
 
 type CreateVAResponse struct {
-	ExternalID  string
-	VANumber    string          // bill_key for Mandiri; va_number for other banks
-	BillerCode  string          // Mandiri only: always "70012"; empty for other banks
-	BankCode    entity.BankCode
-	Amount      int64
-	ExpiryAt    time.Time
+	ExternalID string
+	VANumber   string // bill_key for Mandiri; va_number for other banks
+	BillerCode string // Mandiri only: always "70012"; empty for other banks
+	BankCode   entity.BankCode
+	Amount     int64
+	ExpiryAt   time.Time
 }
 
 type CreateQRISRequest struct {
@@ -82,7 +82,7 @@ type PaymentGateway interface {
 	ProviderName() entity.Provider
 }
 
-// Cash Out (Disbursement) 
+// Cash Out (Disbursement)
 type DisburseRequest struct {
 	ExternalID    string
 	BankCode      entity.BankCode

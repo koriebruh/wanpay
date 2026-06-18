@@ -12,13 +12,15 @@ Module path: `wanpey/core` (Go 1.25)
 
 ```bash
 # First-time setup (once per clone)
-make install-tools   # installs lefthook, golangci-lint, gosec, goimports, gotests, stringer, gomodifytags, sqlc
+make install-tools   # installs air, lefthook, golangci-lint, gosec, goimports, gotests, stringer, gomodifytags, sqlc
 make install-hooks   # activates git hooks (pre-commit, pre-push, commit-msg)
 
 # Daily development
 make dev             # hot reload via Air (preferred)
 make run             # build + run foreground
-make test            # go test -race ./...
+make test            # unit tests only — no network calls (default for CI)
+make test-unit       # same as make test
+make test-integration # hit real provider sandboxes — requires .config.toml with credentials
 make lint            # golangci-lint run ./...
 make vet             # go vet ./...
 
@@ -72,6 +74,8 @@ samber/do v2 — lazy singleton, lifecycle via `do.Shutdownable`.
 | `database.SQLDB` | `internal/infrastructure/database/db.go` | Swappable SQL backend, mockable in tests |
 | `database.Querier` | `internal/infrastructure/database/db.go` | Subset of SQLDB — both `*sql.DB` and `*sql.Tx` implement this |
 | `cache.Cache` | `internal/infrastructure/cache/cache.go` | Redis or in-memory fallback transparently |
+| `gateway.PaymentGateway` | `internal/domain/gateway/gateway.go` | Implemented by each provider adapter |
+| `gateway.DisbursementGateway` | `internal/domain/gateway/gateway.go` | Xendit and DOKU only |
 
 `cache.ProvideCache` returns `redisCache` when Redis is enabled, `memoryCache` when disabled — idempotency works in both modes.
 
@@ -122,11 +126,13 @@ Workers must never query the DB after stage 4 starts — always check `ctx.Done(
 
 **Outbox** (`internal/infrastructure/worker/outbox_worker.go`): poll every 5s, atomic lease via `FOR UPDATE SKIP LOCKED`. Delivers up to 5 webhooks concurrently per batch. DB status writes (`markDelivered`, `scheduleRetry`) use a detached 5s context so they succeed even during graceful shutdown. `OutboxRepo.Insert()` must be called inside the same DB transaction as the payment status update.
 
-**Circuit breaker**: wrap every provider call. Open after 5 consecutive failures, half-open after 30s. (Implementation in `internal/infrastructure/database/postgres/provider/` — not yet built.)
+**Circuit breaker** (`internal/infrastructure/provider/circuit_breaker.go`): wraps every provider call. `CBPaymentGateway` and `CBDisbursementGateway` implement the gateway interfaces and proxy all network calls through `gobreaker`. Settings configurable via `[provider.circuit_breaker]` in config. `ParseWebhook` bypasses the breaker (local operation, no network).
 
 **Signature** (`pkg/signature/`): `Sign`/`Verify` use HMAC-SHA256 with `hmac.Equal` (constant-time). `SignSHA512`/`VerifySHA512` for DOKU.
 
 **PII** (`pkg/mask/`): always wrap sensitive fields with `mask.Card`, `mask.Email`, `mask.Phone`, `mask.Name`, `mask.Secret` before passing to `zap.String`.
+
+**Validation** (`pkg/validator/`): `EchoValidator` wraps go-playground/validator. Registered with `e.Validator`. Handlers call `c.Validate(&input)` — returns `apperror.BadRequest` with per-field details on failure.
 
 ## Rate Limiting
 
@@ -135,6 +141,42 @@ Rate limiting is **not** done at the app level — it must be handled at the inf
 Reason: app-level in-memory rate limiting breaks with autoscaling (each instance has its own counter), blocks provider webhook callbacks (Midtrans/Xendit/DOKU), and interferes with load testing (k6).
 
 Webhook routes (`/webhooks/*`) must never be rate limited.
+
+## Provider Gateway Layer
+
+```
+internal/domain/gateway/gateway.go     ← PaymentGateway + DisbursementGateway interfaces
+internal/infrastructure/provider/
+├── circuit_breaker.go                  ← CBPaymentGateway + CBDisbursementGateway wrappers
+└── midtrans/midtrans.go               ← Midtrans Core API adapter
+```
+
+**Webhook callback routing** — one handler, dispatches by provider name from URL:
+```
+POST /webhooks/{provider}/payment       → PaymentUsecase.HandleWebhook
+POST /webhooks/{provider}/disbursement  → DisbursementUsecase.HandleDisbursementCallback
+```
+
+**Midtrans specifics:**
+- Mandiri VA uses `payment_type: "echannel"` — response gives `bill_key` + `biller_code` (always `70012`)
+- QRIS: `qr_string` fetched via second GET to `actions[0].url`
+- Webhook signature: `SHA512(order_id + status_code + gross_amount + server_key)`
+- Does NOT support disbursement
+
+## HTTP Response Format
+
+```json
+// Success
+{ "success": true, "data": {...}, "meta": { "trace_id": "...", "timestamp": "..." } }
+
+// List
+{ "success": true, "data": [...], "meta": { "trace_id": "...", "pagination": {...} } }
+
+// Error
+{ "success": false, "error": { "message": "...", "details": [...] }, "meta": { "trace_id": "..." } }
+```
+
+`trace_id` is the OpenTelemetry span ID — searchable in Jaeger UI. `X-Request-ID` header is set on every response by Echo middleware.
 
 ## Business Model: PayFac / Aggregator
 
@@ -175,6 +217,20 @@ Current migrations:
 - Compatible with `database.RunInTx` — one `BEGIN/COMMIT` = one transaction
 - Does NOT support: `SET` outside tx, advisory locks, `LISTEN/NOTIFY` (Wanpey does not use any of these)
 
+## Testing
+
+**Unit tests** (default): mock HTTP via `httptest`, no real credentials needed.
+```bash
+make test
+```
+
+**Integration tests**: hit real provider sandboxes. Requires `.config.toml` with valid credentials. Use build tag `integration` — excluded from CI.
+```bash
+make test-integration
+```
+
+Integration tests use `t.Skip()` if credentials are empty — safe to commit.
+
 ## Git Hooks & CI
 
 lefthook enforces:
@@ -187,3 +243,5 @@ GitHub Actions CI mirrors pre-push checks exactly — if hooks pass locally, CI 
 ## Config
 
 `.config.toml` is gitignored. Copy `.config.example.toml` to `.config.toml` to run locally. Path override: `CONFIG_PATH` env var. The `config.Load()` function is public — used by both the DI container and the `migrate` CLI subcommand.
+
+**Important:** `migrate_dsn` must point directly to Postgres (port 5432), not PgBouncer. golang-migrate uses advisory locks which PgBouncer transaction mode does not support.
