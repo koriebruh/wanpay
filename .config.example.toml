@@ -35,6 +35,12 @@ level      = "debug"   # debug | info | warn | error
 encoding   = "console" # console | json
 output     = "stdout"
 
+[provider.circuit_breaker]
+max_requests         = 3   # max requests allowed in half-open state
+interval_seconds     = 60  # rolling window for counting failures
+timeout_seconds      = 30  # seconds to stay open before probing recovery
+consecutive_failures = 5   # consecutive failures before opening
+
 [provider.midtrans]
 server_key    = ""
 client_key    = ""
