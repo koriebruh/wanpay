@@ -6,7 +6,6 @@
 secrets/
 
 # TLS / private keys (NEVER commit)
-*.pem
 *.key
 *.crt
 *.p12

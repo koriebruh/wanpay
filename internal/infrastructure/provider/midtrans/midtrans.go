@@ -70,12 +70,13 @@ func (g *Gateway) CreateVA(ctx context.Context, req gateway.CreateVARequest) (*g
 	}
 
 	return &gateway.CreateVAResponse{
-		ExternalID: resp.OrderID,
-		VANumber:   vaNumber,
-		BillerCode: billerCode,
-		BankCode:   req.BankCode,
-		Amount:     req.Amount,
-		ExpiryAt:   expiry,
+		ExternalID:        resp.OrderID,
+		ProviderPaymentID: resp.OrderID, // Midtrans status/cancel use order_id, not a separate provider ID
+		VANumber:          vaNumber,
+		BillerCode:        billerCode,
+		BankCode:          req.BankCode,
+		Amount:            req.Amount,
+		ExpiryAt:          expiry,
 	}, nil
 }
 
@@ -163,11 +164,12 @@ func (g *Gateway) CreateQRIS(ctx context.Context, req gateway.CreateQRISRequest)
 	}
 
 	return &gateway.CreateQRISResponse{
-		ExternalID: resp.OrderID,
-		QRString:   qrString,
-		QRImageURL: qrImageURL,
-		Amount:     req.Amount,
-		ExpiryAt:   req.ExpiryAt,
+		ExternalID:        resp.OrderID,
+		ProviderPaymentID: resp.OrderID, // Midtrans status/cancel use order_id, not a separate provider ID
+		QRString:          qrString,
+		QRImageURL:        qrImageURL,
+		Amount:            req.Amount,
+		ExpiryAt:          req.ExpiryAt,
 	}, nil
 }
 

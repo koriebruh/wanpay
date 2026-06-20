@@ -21,12 +21,13 @@ type CreateVARequest struct {
 }
 
 type CreateVAResponse struct {
-	ExternalID string
-	VANumber   string // bill_key for Mandiri; va_number for other banks
-	BillerCode string // Mandiri only: always "70012"; empty for other banks
-	BankCode   entity.BankCode
-	Amount     int64
-	ExpiryAt   time.Time
+	ExternalID        string
+	ProviderPaymentID string // provider-specific ID (e.g. Xendit payment_request_id) — store for status/cancel calls
+	VANumber          string // bill_key for Mandiri; va_number for other banks
+	BillerCode        string // Mandiri only: always "70012"; empty for other banks
+	BankCode          entity.BankCode
+	Amount            int64
+	ExpiryAt          time.Time
 }
 
 type CreateQRISRequest struct {
@@ -41,11 +42,12 @@ type CreateQRISRequest struct {
 }
 
 type CreateQRISResponse struct {
-	ExternalID string
-	QRString   string // raw QR string for client-side rendering
-	QRImageURL string // hosted image URL — may be empty depending on provider
-	Amount     int64
-	ExpiryAt   time.Time
+	ExternalID        string
+	ProviderPaymentID string // provider-specific ID (e.g. Xendit payment_request_id) — store for status/cancel calls
+	QRString          string // raw QR string for client-side rendering
+	QRImageURL        string // hosted image URL — may be empty depending on provider
+	Amount            int64
+	ExpiryAt          time.Time
 }
 
 type WebhookEvent struct {

@@ -89,11 +89,14 @@ type MidtransConfig struct {
 type XenditConfig struct {
 	SecretKey    string `toml:"secret_key"`
 	WebhookToken string `toml:"webhook_token"`
+	CallbackURL  string `toml:"callback_url"` // required for QRIS — Xendit POSTs payment events here
 }
 
 type DokuConfig struct {
-	ClientID  string `toml:"client_id"`
-	SecretKey string `toml:"secret_key"`
+	ClientID      string `toml:"client_id"`
+	SecretKey     string `toml:"secret_key"`    // Active Secret Key from dashboard
+	APIKey        string `toml:"api_key"`       // API Key from dashboard — used for HMAC-SHA512 request signatures
+	PrivateKeyPEM string `toml:"private_key"`   // RSA PKCS8 PEM — used for SHA256withRSA B2B access token signature
 }
 
 // FeeConfig holds platform-wide margin settings applied on top of each merchant's FeeConfig.

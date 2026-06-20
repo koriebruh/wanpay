@@ -49,10 +49,20 @@ is_production = false
 [provider.xendit]
 secret_key    = ""
 webhook_token = ""
+callback_url  = ""  # required for QRIS — e.g. https://your-domain.com/webhooks/xendit/payment
 
 [provider.doku]
+api_key    = ""
 client_id  = ""
-secret_key = ""
+secret_key = ""  # HMAC-SHA512 key for transactional request signatures (from Dashboard > Integration > API Keys > Secret Key)
+# RSA PKCS8 private key for B2B access token (SHA256withRSA).
+# Generate key pair:
+#   openssl genrsa -out private.key 2048
+#   openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private.key -out private_pkcs8.key
+# Then upload the public key to DOKU Dashboard > Integration > API Keys > Public Key.
+# Paste the contents of private_pkcs8.key here as a multi-line TOML string:
+private_key_pem = """
+"""
 
 [otel]
 enabled      = true              # false = no-op tracer, tidak ada koneksi ke Jaeger
