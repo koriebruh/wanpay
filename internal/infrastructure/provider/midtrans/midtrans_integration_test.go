@@ -25,7 +25,13 @@ func newIntegrationGateway(t *testing.T) *Gateway {
 		t.Skip("provider.midtrans.server_key not set in .config.toml — skipping integration test")
 	}
 
-	gw := New(cfg.Provider.Midtrans, zap.NewNop())
+	if !cfg.Provider.Midtrans.Enabled {
+		t.Skip("provider.midtrans.enabled = false in .config.toml — skipping integration test")
+	}
+	gw, err := New(cfg.Provider.Midtrans, zap.NewNop())
+	if err != nil {
+		t.Fatalf("new gateway: %v", err)
+	}
 	return gw.(*Gateway)
 }
 

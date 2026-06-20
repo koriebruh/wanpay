@@ -20,6 +20,9 @@ func newIntegrationGateway(t *testing.T) *Gateway {
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}
+	if !cfg.Provider.Xendit.Enabled {
+		t.Skip("provider.xendit.enabled = false in .config.toml — skipping integration test")
+	}
 	if cfg.Provider.Xendit.SecretKey == "" {
 		t.Skip("provider.xendit.secret_key not set in .config.toml — skipping integration test")
 	}

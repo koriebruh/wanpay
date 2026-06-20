@@ -21,6 +21,9 @@ func newIntegrationGateway(t *testing.T) *Gateway {
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}
+	if !cfg.Provider.Doku.Enabled {
+		t.Skip("provider.doku.enabled = false in .config.toml — skipping integration test")
+	}
 	if cfg.Provider.Doku.ClientID == "" {
 		t.Skip("provider.doku.client_id not set — skipping")
 	}
