@@ -42,19 +42,22 @@ timeout_seconds      = 30  # seconds to stay open before probing recovery
 consecutive_failures = 5   # consecutive failures before opening
 
 [provider.midtrans]
+enabled       = true
 server_key    = ""
 client_key    = ""
 is_production = false
 
 [provider.xendit]
+enabled       = true
 secret_key    = ""
 webhook_token = ""
-callback_url  = ""  # required for QRIS — e.g. https://your-domain.com/webhooks/xendit/payment
+callback_url  = ""
 
 [provider.doku]
+enabled    = false   # set true after configuring credentials and registering public key in DOKU dashboard
 api_key    = ""
 client_id  = ""
-secret_key = ""  # HMAC-SHA512 key for transactional request signatures (from Dashboard > Integration > API Keys > Secret Key)
+secret_key = ""
 # RSA PKCS8 private key for B2B access token (SHA256withRSA).
 # Generate key pair:
 #   openssl genrsa -out private.key 2048

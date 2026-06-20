@@ -34,7 +34,13 @@ type Gateway struct {
 	log        *zap.Logger
 }
 
-func New(cfg config.MidtransConfig, log *zap.Logger) gateway.PaymentGateway {
+func New(cfg config.MidtransConfig, log *zap.Logger) (gateway.PaymentGateway, error) {
+	if !cfg.Enabled {
+		return nil, nil
+	}
+	if cfg.ServerKey == "" {
+		return nil, fmt.Errorf("midtrans: server_key is required when enabled")
+	}
 	baseURL := productionBaseURL
 	if !cfg.IsProduction {
 		baseURL = sandboxBaseURL
@@ -44,7 +50,7 @@ func New(cfg config.MidtransConfig, log *zap.Logger) gateway.PaymentGateway {
 		baseURL:    baseURL,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 		log:        log,
-	}
+	}, nil
 }
 
 func (g *Gateway) ProviderName() entity.Provider { return entity.ProviderMidtrans }

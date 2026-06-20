@@ -53,8 +53,11 @@ type Gateway struct {
 }
 
 func New(cfg config.XenditConfig, log *zap.Logger) (*Gateway, error) {
+	if !cfg.Enabled {
+		return nil, nil
+	}
 	if cfg.SecretKey == "" {
-		return nil, fmt.Errorf("xendit: secret_key is required")
+		return nil, fmt.Errorf("xendit: secret_key is required when enabled")
 	}
 	return &Gateway{
 		secretKey:    cfg.SecretKey,

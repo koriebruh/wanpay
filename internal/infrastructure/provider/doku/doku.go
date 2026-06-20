@@ -54,11 +54,14 @@ type Gateway struct {
 }
 
 func New(cfg config.DokuConfig, log *zap.Logger) (*Gateway, error) {
+	if !cfg.Enabled {
+		return nil, nil
+	}
 	if cfg.ClientID == "" || cfg.SecretKey == "" {
-		return nil, fmt.Errorf("doku: client_id and secret_key are required")
+		return nil, fmt.Errorf("doku: client_id and secret_key are required when enabled")
 	}
 	if cfg.PrivateKeyPEM == "" {
-		return nil, fmt.Errorf("doku: private_key_pem is required for B2B token signing (SHA256withRSA)")
+		return nil, fmt.Errorf("doku: private_key is required when enabled (RSA PKCS8 PEM for B2B token)")
 	}
 
 	privateKey, err := parseRSAPrivateKey(cfg.PrivateKeyPEM)

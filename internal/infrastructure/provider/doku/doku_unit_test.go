@@ -47,7 +47,7 @@ func testPrivateKeyPEM(t *testing.T) string {
 
 func newTestGateway(t *testing.T, srv *httptest.Server) *Gateway {
 	t.Helper()
-	gw, err := New(config.DokuConfig{
+	gw, err := New(config.DokuConfig{Enabled: true,
 		ClientID:      testClientID,
 		SecretKey:     testSecretKey,
 		PrivateKeyPEM: testPrivateKeyPEM(t),
