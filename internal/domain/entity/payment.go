@@ -26,6 +26,7 @@ const (
 	ProviderMidtrans Provider = "midtrans"
 	ProviderXendit   Provider = "xendit"
 	ProviderDoku     Provider = "doku"
+	ProviderIPaymu   Provider = "ipaymu"
 )
 
 type BankCode string

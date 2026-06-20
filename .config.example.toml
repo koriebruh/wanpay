@@ -67,6 +67,14 @@ secret_key = ""
 private_key_pem = """
 """
 
+[provider.ipaymu]
+enabled       = false
+api_key       = ""
+va            = ""   # merchant VA number from iPaymu dashboard
+is_production = false
+notify_url    = ""   # webhook URL — iPaymu POSTs payment status here
+
+
 [otel]
 enabled      = true              # false = no-op tracer, tidak ada koneksi ke Jaeger
 endpoint     = "localhost:4317"  # Jaeger OTLP gRPC
