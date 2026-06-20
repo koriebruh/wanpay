@@ -7,6 +7,14 @@ import (
 	"wanpey/core/internal/domain/entity"
 )
 
+// ProviderCapability declares what a provider can do.
+type ProviderCapability string
+
+const (
+	CapabilityCashIn  ProviderCapability = "cash_in"  // accept payments from customers (VA, QRIS)
+	CapabilityCashOut ProviderCapability = "cash_out" // send money to bank accounts (disbursement)
+)
+
 // Cash In (VA & QRIS)
 type CreateVARequest struct {
 	ExternalID    string
@@ -80,6 +88,10 @@ type PaymentGateway interface {
 	// SupportedMethods returns which payment methods this provider supports.
 	// Used by the router to select a capable provider when the merchant does not specify one.
 	SupportedMethods() []entity.PaymentMethod
+
+	// Capabilities declares what this provider supports (cash_in, cash_out, or both).
+	// Used by the usecase router to select the right provider for each operation.
+	Capabilities() []ProviderCapability
 
 	ProviderName() entity.Provider
 }

@@ -110,10 +110,9 @@ func (g *CBPaymentGateway) ParseWebhook(ctx context.Context, headers map[string]
 	return g.inner.ParseWebhook(ctx, headers, body)
 }
 
-func (g *CBPaymentGateway) SupportedMethods() []entity.PaymentMethod {
-	return g.inner.SupportedMethods()
-}
-func (g *CBPaymentGateway) ProviderName() entity.Provider { return g.inner.ProviderName() }
+func (g *CBPaymentGateway) SupportedMethods() []entity.PaymentMethod   { return g.inner.SupportedMethods() }
+func (g *CBPaymentGateway) Capabilities() []gateway.ProviderCapability { return g.inner.Capabilities() }
+func (g *CBPaymentGateway) ProviderName() entity.Provider              { return g.inner.ProviderName() }
 
 type CBDisbursementGateway struct {
 	inner   gateway.DisbursementGateway

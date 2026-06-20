@@ -90,6 +90,9 @@ func (g *Gateway) ProviderName() entity.Provider { return entity.ProviderDoku }
 func (g *Gateway) SupportedMethods() []entity.PaymentMethod {
 	return []entity.PaymentMethod{entity.PaymentMethodVA, entity.PaymentMethodQRIS}
 }
+func (g *Gateway) Capabilities() []gateway.ProviderCapability {
+	return []gateway.ProviderCapability{gateway.CapabilityCashIn, gateway.CapabilityCashOut}
+}
 
 // bankChannel maps BankCode to DOKU's additionalInfo.channel value.
 var bankChannel = map[entity.BankCode]string{

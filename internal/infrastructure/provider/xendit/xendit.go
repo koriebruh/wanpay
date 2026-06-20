@@ -71,6 +71,9 @@ func (g *Gateway) ProviderName() entity.Provider { return entity.ProviderXendit 
 func (g *Gateway) SupportedMethods() []entity.PaymentMethod {
 	return []entity.PaymentMethod{entity.PaymentMethodVA, entity.PaymentMethodQRIS}
 }
+func (g *Gateway) Capabilities() []gateway.ProviderCapability {
+	return []gateway.ProviderCapability{gateway.CapabilityCashIn, gateway.CapabilityCashOut}
+}
 
 func (g *Gateway) CreateVA(ctx context.Context, req gateway.CreateVARequest) (*gateway.CreateVAResponse, error) {
 	channelCode, ok := vaChannelCode[req.BankCode]

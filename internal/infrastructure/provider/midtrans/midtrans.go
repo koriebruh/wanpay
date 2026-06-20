@@ -57,6 +57,9 @@ func (g *Gateway) ProviderName() entity.Provider { return entity.ProviderMidtran
 func (g *Gateway) SupportedMethods() []entity.PaymentMethod {
 	return []entity.PaymentMethod{entity.PaymentMethodVA, entity.PaymentMethodQRIS}
 }
+func (g *Gateway) Capabilities() []gateway.ProviderCapability {
+	return []gateway.ProviderCapability{gateway.CapabilityCashIn}
+}
 
 func (g *Gateway) CreateVA(ctx context.Context, req gateway.CreateVARequest) (*gateway.CreateVAResponse, error) {
 	body := g.buildVARequest(req)
