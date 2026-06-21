@@ -9,13 +9,14 @@ import (
 )
 
 type Config struct {
-	App      AppConfig      `toml:"app"`
-	Database DatabaseConfig `toml:"database"`
-	Redis    RedisConfig    `toml:"redis"`
-	Logger   LoggerConfig   `toml:"logger"`
-	Provider ProviderConfig `toml:"provider"`
-	OTEL     OTELConfig     `toml:"otel"`
-	Fee      FeeConfig      `toml:"fee"`
+	App       AppConfig       `toml:"app"`
+	Database  DatabaseConfig  `toml:"database"`
+	Redis     RedisConfig     `toml:"redis"`
+	Logger    LoggerConfig    `toml:"logger"`
+	Provider  ProviderConfig  `toml:"provider"`
+	OTEL      OTELConfig      `toml:"otel"`
+	Fee       FeeConfig       `toml:"fee"`
+	TaskQueue TaskQueueConfig `toml:"taskqueue"`
 }
 
 type OTELConfig struct {
@@ -64,6 +65,19 @@ type LoggerConfig struct {
 	Level    string `toml:"level"`
 	Encoding string `toml:"encoding"`
 	Output   string `toml:"output"`
+}
+
+type TaskQueueConfig struct {
+	Enabled     bool            `toml:"enabled"`
+	Concurrency int             `toml:"concurrency"` // max concurrent workers; default 10
+	Treasury    TreasuryConfig  `toml:"treasury"`
+}
+
+type TreasuryConfig struct {
+	CheckCron                string `toml:"check_cron"`                  // cron schedule for balance check
+	TopupThresholdIDR        int64  `toml:"topup_threshold_idr"`         // trigger topup when provider balance < this
+	TopupAmountIDR           int64  `toml:"topup_amount_idr"`            // amount to topup when threshold hit
+	LargeCashoutThresholdIDR int64  `toml:"large_cashout_threshold_idr"` // single cashout that triggers immediate topup check
 }
 
 type ProviderConfig struct {

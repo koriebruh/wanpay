@@ -89,13 +89,13 @@ func (g *Gateway) CreateVA(ctx context.Context, req gateway.CreateVARequest) (*g
 	}
 
 	body := map[string]any{
-		"reference_id":        req.ExternalID,
-		"type":                "PAY",
-		"country":             "ID",
-		"currency":            "IDR",
-		"request_amount":      req.Amount,
-		"channel_code":        channelCode,
-		"channel_properties":  channelProps,
+		"reference_id":       req.ExternalID,
+		"type":               "PAY",
+		"country":            "ID",
+		"currency":           "IDR",
+		"request_amount":     req.Amount,
+		"channel_code":       channelCode,
+		"channel_properties": channelProps,
 	}
 	if req.Description != "" {
 		body["description"] = req.Description
@@ -130,13 +130,13 @@ func (g *Gateway) CreateQRIS(ctx context.Context, req gateway.CreateQRISRequest)
 	}
 
 	body := map[string]any{
-		"reference_id":        req.ExternalID,
-		"type":                "PAY",
-		"country":             "ID",
-		"currency":            "IDR",
-		"request_amount":      req.Amount,
-		"channel_code":        "QRIS",
-		"channel_properties":  channelProps,
+		"reference_id":       req.ExternalID,
+		"type":               "PAY",
+		"country":            "ID",
+		"currency":           "IDR",
+		"request_amount":     req.Amount,
+		"channel_code":       "QRIS",
+		"channel_properties": channelProps,
 	}
 	if req.Description != "" {
 		body["description"] = req.Description

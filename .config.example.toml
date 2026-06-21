@@ -1,3 +1,15 @@
+[taskqueue]
+enabled     = true
+concurrency = 10      # max concurrent workers
+
+[taskqueue.treasury]
+check_cron                  = "*/15 * * * *"  # every 15 min — check all provider balances
+topup_threshold_idr         = 10000000        # 10jt: trigger topup when provider balance < this
+topup_amount_idr            = 50000000        # 50jt: topup amount when threshold hit
+large_cashout_threshold_idr = 5000000         # 5jt: single cashout that triggers immediate topup check
+
+# Asynqmon dashboard: http://localhost:8081 (requires make infra-up)
+
 [app]
 name        = "wanpey"
 env         = "development"   # development | production

@@ -248,6 +248,29 @@ Current migrations:
 - Compatible with `database.RunInTx` — one `BEGIN/COMMIT` = one transaction
 - Does NOT support: `SET` outside tx, advisory locks, `LISTEN/NOTIFY` (Wanpey does not use any of these)
 
+**Asynq + Asynqmon** — async task queue for treasury operations.
+- Asynq uses Redis as broker (same Redis instance, no extra infra)
+- Workers run in-process (not a separate container)
+- Asynqmon dashboard: `http://localhost:8081` after `make infra-up`
+- Config: `[taskqueue]` section in `.config.toml`
+
+**Treasury scheduler flow** (`internal/infrastructure/taskqueue/treasury/`):
+```
+Cron (*/15 min): treasury:check_topup
+  → read provider_balances (skips providers with LastReconciledAt == nil)
+  → if balance < threshold: enqueue treasury:execute_topup
+  → TaskID dedup: only 1 pending topup per provider at a time
+
+treasury:execute_topup
+  → NOT IMPLEMENTED (returns error → visible in Asynqmon dead letter)
+  → implement actual inter-bank transfer + update provider_balances
+  → MaxRetry(3) with exponential backoff
+```
+
+Large cashout trigger: `HandleLargeCashoutTopupCheck()` — call from disbursement usecase when single cashout > `large_cashout_threshold_idr`.
+
+**Shutdown**: `srv.Shutdown()` + `scheduler.Shutdown()` MUST be called in `app.Shutdown()` to drain in-flight tasks — critical for financial operations (wired during DI task).
+
 ## Testing
 
 **Unit tests** (default): mock HTTP via `httptest`, no real credentials needed.
