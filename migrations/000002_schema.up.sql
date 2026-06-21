@@ -4,20 +4,22 @@
 -- api_key and webhook_secret store SHA256 hashes — raw values shown once at creation only.
 -- deleted_at is used for soft delete; records are never hard-deleted for financial compliance.
 CREATE TABLE merchants (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    name            TEXT         NOT NULL,
-    email           TEXT         NOT NULL,
-    phone           TEXT         NOT NULL DEFAULT '',
-    status          TEXT         NOT NULL DEFAULT 'pending',
-    api_key         TEXT         NOT NULL,
-    webhook_url     TEXT         NOT NULL DEFAULT '',
-    webhook_secret  TEXT         NOT NULL DEFAULT '',
-    fee_config      JSONB        NOT NULL DEFAULT '{}',
-    deleted_at      TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                TEXT         NOT NULL,
+    email               TEXT         NOT NULL,
+    phone               TEXT         NOT NULL DEFAULT '',
+    status              TEXT         NOT NULL DEFAULT 'pending',
+    api_key             TEXT         NOT NULL,
+    webhook_url         TEXT         NOT NULL DEFAULT '',
+    webhook_secret      TEXT         NOT NULL DEFAULT '',
+    fee_config          JSONB        NOT NULL DEFAULT '{}',
+    daily_cashout_limit BIGINT       NOT NULL DEFAULT 0, -- IDR; 0 = unlimited
+    deleted_at          TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT chk_merchant_status CHECK (status IN ('pending', 'active', 'suspended', 'inactive'))
+    CONSTRAINT chk_merchant_status         CHECK (status IN ('pending', 'active', 'suspended', 'inactive')),
+    CONSTRAINT chk_daily_cashout_limit     CHECK (daily_cashout_limit >= 0)
 );
 
 CREATE UNIQUE INDEX uq_merchant_email   ON merchants (email)   WHERE deleted_at IS NULL;
@@ -84,7 +86,7 @@ CREATE TABLE payments (
     CONSTRAINT chk_payment_fee      CHECK (fee_amount >= 0 AND fee_amount <= amount),
     CONSTRAINT chk_payment_status   CHECK (status IN ('pending', 'paid', 'expired', 'failed', 'cancelled')),
     CONSTRAINT chk_payment_method   CHECK (method IN ('va', 'qris', 'cc')),
-    CONSTRAINT chk_payment_provider CHECK (provider IN ('midtrans', 'xendit', 'doku')),
+    CONSTRAINT chk_payment_provider CHECK (provider IN ('midtrans', 'xendit', 'doku', 'ipaymu')),
     CONSTRAINT chk_payment_currency CHECK (currency IN ('IDR')),
     CONSTRAINT chk_va_fields        CHECK (method != 'va'   OR (va_number != '' AND bank_code != '')),
     CONSTRAINT chk_qris_fields      CHECK (method != 'qris' OR qr_string != '')
@@ -121,7 +123,7 @@ CREATE TABLE disbursements (
     CONSTRAINT chk_disbursement_amount    CHECK (amount > 0),
     CONSTRAINT chk_disbursement_fee       CHECK (fee_amount >= 0 AND fee_amount <= amount),
     CONSTRAINT chk_disbursement_status    CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-    CONSTRAINT chk_disbursement_provider  CHECK (provider IN ('midtrans', 'xendit', 'doku')),
+    CONSTRAINT chk_disbursement_provider  CHECK (provider IN ('midtrans', 'xendit', 'doku', 'ipaymu')),
     CONSTRAINT chk_disbursement_currency  CHECK (currency IN ('IDR')),
     CONSTRAINT chk_disbursement_bank_code CHECK (bank_code IN ('BCA', 'BNI', 'BRI', 'BSI', 'MANDIRI', 'PERMATA', 'CIMB'))
 );
@@ -193,3 +195,22 @@ CREATE TABLE payment_audits (
 );
 
 CREATE INDEX idx_payment_audits_payment_id ON payment_audits (payment_id, created_at ASC);
+
+-- ============================================================
+-- provider_balances (platform balance held at each provider)
+-- ============================================================
+-- Wanpey holds one account per provider (PayFac model).
+-- This table tracks the known balance for audit and reconciliation.
+-- balance_idr is updated after each settlement or manual reconciliation.
+CREATE TABLE provider_balances (
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    provider            TEXT         NOT NULL,
+    balance_idr         BIGINT       NOT NULL DEFAULT 0, -- last known balance in IDR
+    last_reconciled_at  TIMESTAMPTZ,                     -- NULL = never reconciled
+    note                TEXT         NOT NULL DEFAULT '',
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_provider_balance_provider CHECK (provider IN ('midtrans', 'xendit', 'doku', 'ipaymu')),
+    CONSTRAINT uq_provider_balance_provider  UNIQUE (provider)
+);

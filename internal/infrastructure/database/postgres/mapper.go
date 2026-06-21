@@ -107,17 +107,18 @@ func toEntityDisbursement(d gen.Disbursement) *entity.Disbursement {
 
 func toEntityMerchant(m gen.Merchant) *entity.Merchant {
 	em := &entity.Merchant{
-		ID:            m.ID,
-		Name:          m.Name,
-		Email:         m.Email,
-		Phone:         m.Phone,
-		Status:        entity.MerchantStatus(m.Status),
-		APIKey:        m.ApiKey,
-		WebhookURL:    m.WebhookUrl,
-		WebhookSecret: m.WebhookSecret,
-		DeletedAt:     nullTime(m.DeletedAt),
-		CreatedAt:     m.CreatedAt,
-		UpdatedAt:     m.UpdatedAt,
+		ID:                m.ID,
+		Name:              m.Name,
+		Email:             m.Email,
+		Phone:             m.Phone,
+		Status:            entity.MerchantStatus(m.Status),
+		APIKey:            m.ApiKey,
+		WebhookURL:        m.WebhookUrl,
+		WebhookSecret:     m.WebhookSecret,
+		DailyCashoutLimit: m.DailyCashoutLimit,
+		DeletedAt:         nullTime(m.DeletedAt),
+		CreatedAt:         m.CreatedAt,
+		UpdatedAt:         m.UpdatedAt,
 	}
 	if len(m.FeeConfig) > 0 {
 		if err := json.Unmarshal(m.FeeConfig, &em.FeeConfig); err != nil {
@@ -179,4 +180,16 @@ func toEntityPaymentAudit(a gen.PaymentAudit) *entity.PaymentAudit {
 		}
 	}
 	return ea
+}
+
+func toEntityProviderBalance(b gen.ProviderBalance) *entity.ProviderBalance {
+	return &entity.ProviderBalance{
+		ID:               b.ID,
+		Provider:         entity.Provider(b.Provider),
+		BalanceIDR:       b.BalanceIdr,
+		LastReconciledAt: nullTime(b.LastReconciledAt),
+		Note:             b.Note,
+		CreatedAt:        b.CreatedAt,
+		UpdatedAt:        b.UpdatedAt,
+	}
 }

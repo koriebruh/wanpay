@@ -54,7 +54,7 @@ func (q *Queries) GetBankAccountByID(ctx context.Context, id string) (MerchantBa
 }
 
 const getMerchantByAPIKey = `-- name: GetMerchantByAPIKey :one
-SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, deleted_at, created_at, updated_at FROM merchants
+SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, daily_cashout_limit, deleted_at, created_at, updated_at FROM merchants
 WHERE api_key = $1 AND deleted_at IS NULL
 `
 
@@ -71,6 +71,7 @@ func (q *Queries) GetMerchantByAPIKey(ctx context.Context, apiKey string) (Merch
 		&i.WebhookUrl,
 		&i.WebhookSecret,
 		&i.FeeConfig,
+		&i.DailyCashoutLimit,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -79,7 +80,7 @@ func (q *Queries) GetMerchantByAPIKey(ctx context.Context, apiKey string) (Merch
 }
 
 const getMerchantByEmail = `-- name: GetMerchantByEmail :one
-SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, deleted_at, created_at, updated_at FROM merchants
+SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, daily_cashout_limit, deleted_at, created_at, updated_at FROM merchants
 WHERE email = $1 AND deleted_at IS NULL
 `
 
@@ -96,6 +97,7 @@ func (q *Queries) GetMerchantByEmail(ctx context.Context, email string) (Merchan
 		&i.WebhookUrl,
 		&i.WebhookSecret,
 		&i.FeeConfig,
+		&i.DailyCashoutLimit,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -104,7 +106,7 @@ func (q *Queries) GetMerchantByEmail(ctx context.Context, email string) (Merchan
 }
 
 const getMerchantByID = `-- name: GetMerchantByID :one
-SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, deleted_at, created_at, updated_at FROM merchants
+SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, daily_cashout_limit, deleted_at, created_at, updated_at FROM merchants
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -121,6 +123,7 @@ func (q *Queries) GetMerchantByID(ctx context.Context, id string) (Merchant, err
 		&i.WebhookUrl,
 		&i.WebhookSecret,
 		&i.FeeConfig,
+		&i.DailyCashoutLimit,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -192,7 +195,7 @@ func (q *Queries) InsertBankAccount(ctx context.Context, arg InsertBankAccountPa
 const insertMerchant = `-- name: InsertMerchant :one
 INSERT INTO merchants (id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config)
 VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, deleted_at, created_at, updated_at
+RETURNING id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, daily_cashout_limit, deleted_at, created_at, updated_at
 `
 
 type InsertMerchantParams struct {
@@ -228,6 +231,7 @@ func (q *Queries) InsertMerchant(ctx context.Context, arg InsertMerchantParams) 
 		&i.WebhookUrl,
 		&i.WebhookSecret,
 		&i.FeeConfig,
+		&i.DailyCashoutLimit,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -345,29 +349,31 @@ func (q *Queries) UpdateBankAccount(ctx context.Context, arg UpdateBankAccountPa
 
 const updateMerchant = `-- name: UpdateMerchant :one
 UPDATE merchants
-SET name           = $2,
-    email          = $3,
-    phone          = $4,
-    status         = $5,
-    api_key        = $6,
-    webhook_url    = $7,
-    webhook_secret = $8,
-    fee_config     = $9,
-    updated_at     = NOW()
+SET name                = $2,
+    email               = $3,
+    phone               = $4,
+    status              = $5,
+    api_key             = $6,
+    webhook_url         = $7,
+    webhook_secret      = $8,
+    fee_config          = $9,
+    daily_cashout_limit = $10,
+    updated_at          = NOW()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, deleted_at, created_at, updated_at
+RETURNING id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, daily_cashout_limit, deleted_at, created_at, updated_at
 `
 
 type UpdateMerchantParams struct {
-	ID            string          `json:"id"`
-	Name          string          `json:"name"`
-	Email         string          `json:"email"`
-	Phone         string          `json:"phone"`
-	Status        string          `json:"status"`
-	ApiKey        string          `json:"api_key"`
-	WebhookUrl    string          `json:"webhook_url"`
-	WebhookSecret string          `json:"webhook_secret"`
-	FeeConfig     json.RawMessage `json:"fee_config"`
+	ID                string          `json:"id"`
+	Name              string          `json:"name"`
+	Email             string          `json:"email"`
+	Phone             string          `json:"phone"`
+	Status            string          `json:"status"`
+	ApiKey            string          `json:"api_key"`
+	WebhookUrl        string          `json:"webhook_url"`
+	WebhookSecret     string          `json:"webhook_secret"`
+	FeeConfig         json.RawMessage `json:"fee_config"`
+	DailyCashoutLimit int64           `json:"daily_cashout_limit"`
 }
 
 func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) (Merchant, error) {
@@ -381,6 +387,7 @@ func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) 
 		arg.WebhookUrl,
 		arg.WebhookSecret,
 		arg.FeeConfig,
+		arg.DailyCashoutLimit,
 	)
 	var i Merchant
 	err := row.Scan(
@@ -393,6 +400,7 @@ func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) 
 		&i.WebhookUrl,
 		&i.WebhookSecret,
 		&i.FeeConfig,
+		&i.DailyCashoutLimit,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,

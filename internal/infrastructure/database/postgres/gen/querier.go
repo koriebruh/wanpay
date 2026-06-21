@@ -26,6 +26,7 @@ type Querier interface {
 	GetPaymentByExternalID(ctx context.Context, arg GetPaymentByExternalIDParams) (Payment, error)
 	GetPaymentByID(ctx context.Context, id string) (Payment, error)
 	GetPrimaryBankAccount(ctx context.Context, merchantID string) (MerchantBankAccount, error)
+	GetProviderBalance(ctx context.Context, provider string) (ProviderBalance, error)
 	InsertBankAccount(ctx context.Context, arg InsertBankAccountParams) (MerchantBankAccount, error)
 	InsertDisbursement(ctx context.Context, arg InsertDisbursementParams) (Disbursement, error)
 	InsertMerchant(ctx context.Context, arg InsertMerchantParams) (Merchant, error)
@@ -39,6 +40,7 @@ type Querier interface {
 	ListMutationsByMerchant(ctx context.Context, arg ListMutationsByMerchantParams) ([]Mutation, error)
 	ListPaymentAuditsByPaymentID(ctx context.Context, paymentID string) ([]PaymentAudit, error)
 	ListPaymentsByMerchant(ctx context.Context, arg ListPaymentsByMerchantParams) ([]Payment, error)
+	ListProviderBalances(ctx context.Context) ([]ProviderBalance, error)
 	MarkOutboxDelivered(ctx context.Context, id string) error
 	MarkOutboxFailed(ctx context.Context, arg MarkOutboxFailedParams) error
 	SoftDeleteMerchant(ctx context.Context, id string) error
@@ -47,6 +49,7 @@ type Querier interface {
 	UpdateDisbursementStatus(ctx context.Context, arg UpdateDisbursementStatusParams) (Disbursement, error)
 	UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) (Merchant, error)
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) (Payment, error)
+	UpsertProviderBalance(ctx context.Context, arg UpsertProviderBalanceParams) (ProviderBalance, error)
 }
 
 var _ Querier = (*Queries)(nil)

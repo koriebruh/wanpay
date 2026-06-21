@@ -1,4 +1,5 @@
 -- Drop in reverse FK dependency order.
+DROP TABLE IF EXISTS provider_balances;
 DROP TABLE IF EXISTS payment_audits;
 DROP TABLE IF EXISTS mutations;
 DROP TABLE IF EXISTS disbursements;

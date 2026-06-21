@@ -31,18 +31,19 @@ type Disbursement struct {
 }
 
 type Merchant struct {
-	ID            string          `json:"id"`
-	Name          string          `json:"name"`
-	Email         string          `json:"email"`
-	Phone         string          `json:"phone"`
-	Status        string          `json:"status"`
-	ApiKey        string          `json:"api_key"`
-	WebhookUrl    string          `json:"webhook_url"`
-	WebhookSecret string          `json:"webhook_secret"`
-	FeeConfig     json.RawMessage `json:"fee_config"`
-	DeletedAt     sql.NullTime    `json:"deleted_at"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
+	ID                string          `json:"id"`
+	Name              string          `json:"name"`
+	Email             string          `json:"email"`
+	Phone             string          `json:"phone"`
+	Status            string          `json:"status"`
+	ApiKey            string          `json:"api_key"`
+	WebhookUrl        string          `json:"webhook_url"`
+	WebhookSecret     string          `json:"webhook_secret"`
+	FeeConfig         json.RawMessage `json:"fee_config"`
+	DailyCashoutLimit int64           `json:"daily_cashout_limit"`
+	DeletedAt         sql.NullTime    `json:"deleted_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
 type MerchantBankAccount struct {
@@ -120,4 +121,14 @@ type PaymentAudit struct {
 	Actor     string          `json:"actor"`
 	Metadata  json.RawMessage `json:"metadata"`
 	CreatedAt time.Time       `json:"created_at"`
+}
+
+type ProviderBalance struct {
+	ID               string       `json:"id"`
+	Provider         string       `json:"provider"`
+	BalanceIdr       int64        `json:"balance_idr"`
+	LastReconciledAt sql.NullTime `json:"last_reconciled_at"`
+	Note             string       `json:"note"`
+	CreatedAt        time.Time    `json:"created_at"`
+	UpdatedAt        time.Time    `json:"updated_at"`
 }

@@ -17,15 +17,16 @@ WHERE email = $1 AND deleted_at IS NULL;
 
 -- name: UpdateMerchant :one
 UPDATE merchants
-SET name           = $2,
-    email          = $3,
-    phone          = $4,
-    status         = $5,
-    api_key        = $6,
-    webhook_url    = $7,
-    webhook_secret = $8,
-    fee_config     = $9,
-    updated_at     = NOW()
+SET name                = $2,
+    email               = $3,
+    phone               = $4,
+    status              = $5,
+    api_key             = $6,
+    webhook_url         = $7,
+    webhook_secret      = $8,
+    fee_config          = $9,
+    daily_cashout_limit = $10,
+    updated_at          = NOW()
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
 
