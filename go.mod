@@ -7,6 +7,7 @@ require (
 	github.com/XSAM/otelsql v0.42.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/golang-migrate/migrate/v4 v4.19.1
+	github.com/hibiken/asynq v0.26.0
 	github.com/labstack/echo/v4 v4.15.4
 	github.com/lib/pq v1.12.3
 	github.com/redis/go-redis/v9 v9.20.1
@@ -32,7 +33,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
-	github.com/hibiken/asynq v0.26.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
