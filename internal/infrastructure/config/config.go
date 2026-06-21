@@ -68,9 +68,9 @@ type LoggerConfig struct {
 }
 
 type TaskQueueConfig struct {
-	Enabled     bool            `toml:"enabled"`
-	Concurrency int             `toml:"concurrency"` // max concurrent workers; default 10
-	Treasury    TreasuryConfig  `toml:"treasury"`
+	Enabled     bool           `toml:"enabled"`
+	Concurrency int            `toml:"concurrency"` // max concurrent workers; default 10
+	Treasury    TreasuryConfig `toml:"treasury"`
 }
 
 type TreasuryConfig struct {
