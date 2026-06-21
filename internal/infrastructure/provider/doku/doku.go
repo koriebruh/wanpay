@@ -379,7 +379,7 @@ func (g *Gateway) post(ctx context.Context, path, externalID string, body any, d
 }
 
 func (g *Gateway) verifyWebhookSignature(method, path, ts string, body []byte, expected string) bool {
-	token, _ := g.accessToken(context.Background())
+	token, _ := g.accessToken(context.Background()) //nolint:errcheck // best-effort; empty token causes signature mismatch which is handled by the caller
 	bodyHash := strings.ToLower(hex.EncodeToString(sha256Sum(body)))
 	computed := hmacSHA512(g.secretKey, method+":"+path+":"+token+":"+bodyHash+":"+ts)
 	return hmac.Equal([]byte(computed), []byte(expected))

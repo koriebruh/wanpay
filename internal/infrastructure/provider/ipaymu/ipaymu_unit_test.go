@@ -33,7 +33,10 @@ func newTestGateway(t *testing.T, srv *httptest.Server) *Gateway {
 	if err != nil {
 		t.Fatalf("new gateway: %v", err)
 	}
-	g := gw.(*Gateway)
+	g, ok := gw.(*Gateway)
+	if !ok {
+		t.Fatal("unexpected gateway type")
+	}
 	g.baseURL = srv.URL
 	g.httpClient = srv.Client()
 	return g

@@ -31,10 +31,10 @@ func (r *providerBalanceRepo) queries(ctx context.Context) *gen.Queries {
 
 func (r *providerBalanceRepo) Upsert(ctx context.Context, b *entity.ProviderBalance) error {
 	row, err := r.queries(ctx).UpsertProviderBalance(ctx, gen.UpsertProviderBalanceParams{
-		Provider:          string(b.Provider),
-		BalanceIdr:        b.BalanceIDR,
-		LastReconciledAt:  toNullTime(b.LastReconciledAt),
-		Note:              b.Note,
+		Provider:         string(b.Provider),
+		BalanceIdr:       b.BalanceIDR,
+		LastReconciledAt: toNullTime(b.LastReconciledAt),
+		Note:             b.Note,
 	})
 	if err != nil {
 		return fmt.Errorf("upsert provider balance: %w", err)

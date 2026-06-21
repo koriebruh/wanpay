@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-Wanpey is a Go modular monolith payment gateway **aggregator** — one service that routes payments to multiple providers (Midtrans, Xendit, DOKU), handles webhooks reliably, and exposes a single API to merchants.
+Wanpey is a Go modular monolith payment gateway **aggregator** — one service that routes payments to multiple providers (Midtrans, Xendit, DOKU, iPaymu), handles webhooks reliably, and exposes a single API to merchants.
 
 Module path: `wanpey/core` (Go 1.25)
 
@@ -145,11 +145,23 @@ Webhook routes (`/webhooks/*`) must never be rate limited.
 ## Provider Gateway Layer
 
 ```
-internal/domain/gateway/gateway.go     ← PaymentGateway + DisbursementGateway interfaces
+internal/domain/gateway/gateway.go     ← PaymentGateway + DisbursementGateway + ProviderCapability
 internal/infrastructure/provider/
 ├── circuit_breaker.go                  ← CBPaymentGateway + CBDisbursementGateway wrappers
-└── midtrans/midtrans.go               ← Midtrans Core API adapter
+├── midtrans/midtrans.go               ← Midtrans Core API adapter
+├── xendit/xendit.go                   ← Xendit Payment Request v3 + Payouts v2
+├── doku/doku.go                       ← DOKU SNAP BI-SNAP adapter
+└── ipaymu/ipaymu.go                   ← iPaymu direct API adapter
 ```
+
+**Provider capabilities** — each provider declares what it supports via `Capabilities()`:
+
+| Provider | CashIn (VA/QRIS) | CashOut (Disbursement) |
+|---|---|---|
+| Midtrans | ✅ | ❌ |
+| Xendit | ✅ | ✅ |
+| DOKU | ✅ | ✅ |
+| iPaymu | ✅ | ❌ |
 
 **Webhook callback routing** — one handler, dispatches by provider name from URL:
 ```
@@ -162,6 +174,23 @@ POST /webhooks/{provider}/disbursement  → DisbursementUsecase.HandleDisburseme
 - QRIS: `qr_string` fetched via second GET to `actions[0].url`
 - Webhook signature: `SHA512(order_id + status_code + gross_amount + server_key)`
 - Does NOT support disbursement
+
+**Xendit specifics:**
+- Uses Payment Request API v3 (`/v3/payment_requests`) with `api-version` header
+- `ProviderPaymentID` = `payment_request_id` — used for cancel/status calls (NOT the merchant reference)
+- Webhook: static token comparison via `x-callback-token` header (not HMAC)
+- Disbursement via Payouts v2 API (`/v2/payouts`)
+
+**DOKU specifics:**
+- Two-step auth: B2B token (SHA256withRSA) then request (HMAC-SHA512 hex)
+- Private key (RSA PKCS8 PEM) required — generate and register public key in DOKU dashboard
+- `migrate_dsn` must bypass PgBouncer (advisory locks used by golang-migrate)
+
+**iPaymu specifics:**
+- Auth headers: `va` (merchant VA), `signature`, `timestamp` (no Authorization header)
+- Signature: `HMAC-SHA256(apiKey, "POST:{va}:{SHA256(body)}:{apiKey}")` — timestamp NOT in signature
+- Body must omit empty string fields — iPaymu strips them before hashing on server side
+- Does NOT support cancel or disbursement via API v2
 
 ## HTTP Response Format
 
@@ -181,10 +210,11 @@ POST /webhooks/{provider}/disbursement  → DisbursementUsecase.HandleDisburseme
 ## Business Model: PayFac / Aggregator
 
 Wanpey uses the **Payment Facilitator** model:
-- Wanpey holds **one account per provider** (Midtrans, Xendit, DOKU) — all merchant payments flow into Wanpey's provider accounts
+- Wanpey holds **one account per provider** (Midtrans, Xendit, DOKU, iPaymu) — all merchant payments flow into Wanpey's provider accounts
 - Merchant balances are tracked in the **internal `Mutation` ledger**, not at the provider level
 - Cash-out (disbursement) is sent from Wanpey's provider balance to the merchant's registered bank account
 - Merchants are never exposed to provider accounts — switching or adding providers is invisible to them
+- `provider_balances` table tracks the platform's known balance at each provider for audit and reconciliation
 
 **Fee structure** (FeeBearer is always merchant — never customer):
 - `entity.FeeConfig` = per-merchant contracted fee (VA flat, QRIS %, Disbursement flat)
@@ -199,6 +229,7 @@ Key design decisions:
 - `WebhookSecret` stored as SHA256 hash. Used to sign outbound webhook payloads via HMAC-SHA256 (`pkg/signature`)
 - Max **3 bank accounts** per merchant (`entity.MaxBankAccounts`). Limit enforced in usecase, not entity
 - `Merchant.Balance` is NOT a stored field — always calculated live via `MutationRepository.GetBalance()`
+- `Merchant.DailyCashoutLimit` — max total disbursement per day in IDR; `0` = unlimited
 - `Merchant.CanTransact()` must return true before any payment can be created for that merchant
 
 ## Migrations
@@ -207,7 +238,7 @@ Format: `migrations/NNNNNN_name.up.sql` / `.down.sql` (golang-migrate v4). Run `
 
 Current migrations:
 - `000001_outbox` — outbox table
-- `000002_schema` — all business tables: merchants, merchant_bank_accounts, payments, disbursements, mutations, payment_audits
+- `000002_schema` — all business tables: merchants (+ `daily_cashout_limit`), merchant_bank_accounts, payments, disbursements, mutations, payment_audits, provider_balances
 
 ## Infrastructure
 

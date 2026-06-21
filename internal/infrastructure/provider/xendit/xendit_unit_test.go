@@ -21,10 +21,13 @@ const testSecretKey = "xnd_development_testkey"
 const testWebhookToken = "test-webhook-token"
 
 func newTestGateway(baseURL string) *Gateway {
-	gw, _ := New(config.XenditConfig{Enabled: true,
+	gw, err := New(config.XenditConfig{Enabled: true,
 		SecretKey:    testSecretKey,
 		WebhookToken: testWebhookToken,
 	}, zap.NewNop())
+	if err != nil || gw == nil {
+		panic("newTestGateway failed")
+	}
 	gw.httpClient = &http.Client{Timeout: 5 * time.Second}
 	_ = baseURL
 	return gw

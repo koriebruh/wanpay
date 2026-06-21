@@ -93,16 +93,16 @@ func (r *merchantRepo) Update(ctx context.Context, m *entity.Merchant) error {
 		return fmt.Errorf("marshal fee_config: %w", err)
 	}
 	row, err := r.queries(ctx).UpdateMerchant(ctx, gen.UpdateMerchantParams{
-		ID:                 m.ID,
-		Name:               m.Name,
-		Email:              m.Email,
-		Phone:              m.Phone,
-		Status:             string(m.Status),
-		ApiKey:             m.APIKey,
-		WebhookUrl:         m.WebhookURL,
-		WebhookSecret:      m.WebhookSecret,
-		FeeConfig:          feeJSON,
-		DailyCashoutLimit:  m.DailyCashoutLimit,
+		ID:                m.ID,
+		Name:              m.Name,
+		Email:             m.Email,
+		Phone:             m.Phone,
+		Status:            string(m.Status),
+		ApiKey:            m.APIKey,
+		WebhookUrl:        m.WebhookURL,
+		WebhookSecret:     m.WebhookSecret,
+		FeeConfig:         feeJSON,
+		DailyCashoutLimit: m.DailyCashoutLimit,
 	})
 	if err != nil {
 		return fmt.Errorf("update merchant: %w", err)

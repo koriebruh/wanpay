@@ -57,19 +57,19 @@ type MerchantBankAccount struct {
 // APIKey format: wpay_live_<32 random chars> (production) | wpay_test_<32 random chars> (sandbox).
 // DeletedAt is set on soft delete — records are never hard-deleted for financial compliance.
 type Merchant struct {
-	ID                 string
-	Name               string
-	Email              string
-	Phone              string
-	Status             MerchantStatus
-	APIKey             string // SHA256 hash of the raw key
-	WebhookURL         string // Wanpey POSTs payment events here
-	WebhookSecret      string // SHA256 hash; used to sign outbound webhook payloads via HMAC-SHA256
-	FeeConfig          FeeConfig
-	DailyCashoutLimit  int64      // IDR; 0 = unlimited
-	DeletedAt          *time.Time // nil = active record; soft delete only, never hard-delete
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	ID                string
+	Name              string
+	Email             string
+	Phone             string
+	Status            MerchantStatus
+	APIKey            string // SHA256 hash of the raw key
+	WebhookURL        string // Wanpey POSTs payment events here
+	WebhookSecret     string // SHA256 hash; used to sign outbound webhook payloads via HMAC-SHA256
+	FeeConfig         FeeConfig
+	DailyCashoutLimit int64      // IDR; 0 = unlimited
+	DeletedAt         *time.Time // nil = active record; soft delete only, never hard-delete
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 func (m *Merchant) IsActive() bool {

@@ -77,9 +77,9 @@ type ProviderConfig struct {
 type IPaymuConfig struct {
 	Enabled      bool   `toml:"enabled"`
 	APIKey       string `toml:"api_key"`
-	VA           string `toml:"va"`           // merchant's VA number from iPaymu dashboard
+	VA           string `toml:"va"` // merchant's VA number from iPaymu dashboard
 	IsProduction bool   `toml:"is_production"`
-	NotifyURL    string `toml:"notify_url"`   // webhook callback URL for payment notifications
+	NotifyURL    string `toml:"notify_url"` // webhook callback URL for payment notifications
 }
 
 type CircuitBreakerConfig struct {
