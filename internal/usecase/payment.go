@@ -9,7 +9,7 @@ import (
 
 type CreateVAInput struct {
 	MerchantID    string          `json:"-"`
-	Provider      entity.Provider `json:"provider"       validate:"required,oneof=midtrans xendit doku"`
+	Provider      entity.Provider `json:"provider"       validate:"required,oneof=midtrans xendit doku ipaymu"`
 	BankCode      entity.BankCode `json:"bank_code"      validate:"required,oneof=BCA BNI BRI BSI MANDIRI PERMATA CIMB"`
 	Amount        int64           `json:"amount"         validate:"required,gt=0"`
 	Currency      entity.Currency `json:"currency"       validate:"required,oneof=IDR"`
@@ -22,7 +22,7 @@ type CreateVAInput struct {
 
 type CreateQRISInput struct {
 	MerchantID    string          `json:"-"`
-	Provider      entity.Provider `json:"provider"       validate:"required,oneof=midtrans xendit doku"`
+	Provider      entity.Provider `json:"provider"       validate:"required,oneof=midtrans xendit doku ipaymu"`
 	Amount        int64           `json:"amount"         validate:"required,gt=0"`
 	Currency      entity.Currency `json:"currency"       validate:"required,oneof=IDR"`
 	CustomerName  string          `json:"customer_name"  validate:"required,max=100"`

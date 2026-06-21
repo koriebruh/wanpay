@@ -26,4 +26,7 @@ type DisbursementRepository interface {
 	FindByExternalID(ctx context.Context, provider entity.Provider, externalID string) (*entity.Disbursement, error)
 	Update(ctx context.Context, disbursement *entity.Disbursement) error
 	List(ctx context.Context, filter ListDisbursementFilter) ([]*entity.Disbursement, int64, error)
+	// SumDisbursementsToday returns the total amount disbursed today (WIB).
+	// Used to enforce merchant.DailyCashoutLimit.
+	SumDisbursementsToday(ctx context.Context, merchantID string) (int64, error)
 }

@@ -44,6 +44,9 @@ type Querier interface {
 	MarkOutboxDelivered(ctx context.Context, id string) error
 	MarkOutboxFailed(ctx context.Context, arg MarkOutboxFailedParams) error
 	SoftDeleteMerchant(ctx context.Context, id string) error
+	// Returns total amount disbursed by a merchant today (WIB UTC+7).
+	// Excludes failed and cancelled disbursements.
+	SumDisbursementsToday(ctx context.Context, merchantID string) (int64, error)
 	UnsetPrimaryBankAccounts(ctx context.Context, merchantID string) error
 	UpdateBankAccount(ctx context.Context, arg UpdateBankAccountParams) (MerchantBankAccount, error)
 	UpdateDisbursementStatus(ctx context.Context, arg UpdateDisbursementStatusParams) (Disbursement, error)

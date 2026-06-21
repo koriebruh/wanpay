@@ -1,0 +1,197 @@
+package impl
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"wanpey/core/internal/domain/entity"
+	"wanpey/core/internal/domain/repository"
+	"wanpey/core/internal/usecase"
+	"wanpey/core/pkg/apperror"
+)
+
+type merchantUsecase struct {
+	merchantRepo repository.MerchantRepository
+	mutationRepo repository.MutationRepository
+}
+
+func NewMerchantUsecase(
+	merchantRepo repository.MerchantRepository,
+	mutationRepo repository.MutationRepository,
+) usecase.MerchantUsecase {
+	return &merchantUsecase{
+		merchantRepo: merchantRepo,
+		mutationRepo: mutationRepo,
+	}
+}
+
+func (u *merchantUsecase) Create(ctx context.Context, input usecase.CreateMerchantInput) (*usecase.CreateMerchantOutput, error) {
+	existing, findErr := u.merchantRepo.FindByEmail(ctx, input.Email)
+	if findErr == nil && existing != nil {
+		return nil, apperror.Conflict("email %s is already registered", input.Email)
+	}
+	// Only skip the conflict check on NotFound — propagate real DB errors
+	var ae *apperror.AppError
+	if findErr != nil && !errors.As(findErr, &ae) {
+		return nil, findErr
+	}
+
+	rawKey, hashedKey := generateAPIKey(false)
+	rawSecret, hashedSecret := generateSecret()
+
+	m := &entity.Merchant{
+		Name:          input.Name,
+		Email:         input.Email,
+		Phone:         input.Phone,
+		Status:        entity.MerchantStatusPending,
+		APIKey:        hashedKey,
+		WebhookURL:    input.WebhookURL,
+		WebhookSecret: hashedSecret,
+		FeeConfig:     input.FeeConfig,
+	}
+	if err := u.merchantRepo.Save(ctx, m); err != nil {
+		return nil, fmt.Errorf("create merchant: %w", err)
+	}
+
+	return &usecase.CreateMerchantOutput{
+		ID:            m.ID,
+		Name:          m.Name,
+		Status:        m.Status,
+		APIKey:        rawKey,
+		WebhookSecret: rawSecret,
+		CreatedAt:     m.CreatedAt,
+	}, nil
+}
+
+func (u *merchantUsecase) GetMerchant(ctx context.Context, id string) (*usecase.MerchantOutput, error) {
+	m, err := u.merchantRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	balance, _ := u.mutationRepo.GetBalance(ctx, id)
+	return toMerchantOutput(m, balance), nil
+}
+
+func (u *merchantUsecase) Update(ctx context.Context, input usecase.UpdateMerchantInput) (*usecase.MerchantOutput, error) {
+	m, err := u.merchantRepo.FindByID(ctx, input.MerchantID)
+	if err != nil {
+		return nil, err
+	}
+	if input.Name != "" {
+		m.Name = input.Name
+	}
+	if input.Email != "" {
+		m.Email = input.Email
+	}
+	if input.Phone != "" {
+		m.Phone = input.Phone
+	}
+	if input.WebhookURL != "" {
+		m.WebhookURL = input.WebhookURL
+	}
+	m.FeeConfig = input.FeeConfig
+	if err := u.merchantRepo.Update(ctx, m); err != nil {
+		return nil, fmt.Errorf("update merchant: %w", err)
+	}
+	balance, _ := u.mutationRepo.GetBalance(ctx, m.ID)
+	return toMerchantOutput(m, balance), nil
+}
+
+func (u *merchantUsecase) Suspend(ctx context.Context, merchantID string) error {
+	m, err := u.merchantRepo.FindByID(ctx, merchantID)
+	if err != nil {
+		return err
+	}
+	m.Status = entity.MerchantStatusSuspended
+	return u.merchantRepo.Update(ctx, m)
+}
+
+func (u *merchantUsecase) Activate(ctx context.Context, merchantID string) error {
+	m, err := u.merchantRepo.FindByID(ctx, merchantID)
+	if err != nil {
+		return err
+	}
+	m.Status = entity.MerchantStatusActive
+	return u.merchantRepo.Update(ctx, m)
+}
+
+func (u *merchantUsecase) RegenerateAPIKey(ctx context.Context, merchantID string) (string, error) {
+	m, err := u.merchantRepo.FindByID(ctx, merchantID)
+	if err != nil {
+		return "", err
+	}
+	rawKey, hashedKey := generateAPIKey(false)
+	m.APIKey = hashedKey
+	if err := u.merchantRepo.Update(ctx, m); err != nil {
+		return "", fmt.Errorf("update api key: %w", err)
+	}
+	return rawKey, nil
+}
+
+func (u *merchantUsecase) AddBankAccount(ctx context.Context, input usecase.AddBankAccountInput) (*usecase.BankAccountOutput, error) {
+	count, err := u.merchantRepo.CountBankAccounts(ctx, input.MerchantID)
+	if err != nil {
+		return nil, err
+	}
+	if count >= entity.MaxBankAccounts {
+		return nil, apperror.UnprocessableEntity("maximum %d bank accounts allowed", entity.MaxBankAccounts)
+	}
+	if input.SetAsPrimary {
+		if err := u.merchantRepo.UnsetPrimaryBankAccounts(ctx, input.MerchantID); err != nil {
+			return nil, fmt.Errorf("unset primary: %w", err)
+		}
+	}
+	a := &entity.MerchantBankAccount{
+		MerchantID:    input.MerchantID,
+		BankCode:      input.BankCode,
+		AccountNumber: input.AccountNumber,
+		AccountName:   input.AccountName,
+		IsPrimary:     input.SetAsPrimary,
+	}
+	if err := u.merchantRepo.SaveBankAccount(ctx, a); err != nil {
+		return nil, fmt.Errorf("save bank account: %w", err)
+	}
+	return toBankAccountOutput(a), nil
+}
+
+func (u *merchantUsecase) ListBankAccounts(ctx context.Context, merchantID string) ([]*usecase.BankAccountOutput, error) {
+	accounts, err := u.merchantRepo.FindBankAccountsByMerchantID(ctx, merchantID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*usecase.BankAccountOutput, len(accounts))
+	for i, a := range accounts {
+		out[i] = toBankAccountOutput(a)
+	}
+	return out, nil
+}
+
+func (u *merchantUsecase) RemoveBankAccount(ctx context.Context, merchantID, accountID string) error {
+	a, err := u.merchantRepo.FindBankAccountByID(ctx, accountID)
+	if err != nil {
+		return err
+	}
+	if a.MerchantID != merchantID {
+		return apperror.NotFound("bank account not found")
+	}
+	if a.IsPrimary {
+		return apperror.UnprocessableEntity("cannot remove primary bank account — set another as primary first")
+	}
+	return u.merchantRepo.DeleteBankAccount(ctx, accountID)
+}
+
+func (u *merchantUsecase) SetPrimaryBankAccount(ctx context.Context, merchantID, accountID string) error {
+	a, err := u.merchantRepo.FindBankAccountByID(ctx, accountID)
+	if err != nil {
+		return err
+	}
+	if a.MerchantID != merchantID {
+		return apperror.NotFound("bank account not found")
+	}
+	if err := u.merchantRepo.UnsetPrimaryBankAccounts(ctx, merchantID); err != nil {
+		return fmt.Errorf("unset primary: %w", err)
+	}
+	a.IsPrimary = true
+	return u.merchantRepo.UpdateBankAccount(ctx, a)
+}

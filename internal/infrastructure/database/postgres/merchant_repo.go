@@ -141,6 +141,24 @@ func (r *merchantRepo) FindBankAccountsByMerchantID(ctx context.Context, merchan
 	return result, nil
 }
 
+func (r *merchantRepo) FindBankAccountByID(ctx context.Context, accountID string) (*entity.MerchantBankAccount, error) {
+	row, err := r.queries(ctx).GetBankAccountByID(ctx, accountID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, apperror.NotFound("bank account %s not found", accountID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get bank account by id: %w", err)
+	}
+	return toEntityBankAccount(row), nil
+}
+
+func (r *merchantRepo) UnsetPrimaryBankAccounts(ctx context.Context, merchantID string) error {
+	if err := r.queries(ctx).UnsetPrimaryBankAccounts(ctx, merchantID); err != nil {
+		return fmt.Errorf("unset primary bank accounts: %w", err)
+	}
+	return nil
+}
+
 func (r *merchantRepo) FindPrimaryBankAccount(ctx context.Context, merchantID string) (*entity.MerchantBankAccount, error) {
 	row, err := r.queries(ctx).GetPrimaryBankAccount(ctx, merchantID)
 	if errors.Is(err, sql.ErrNoRows) {

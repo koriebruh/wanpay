@@ -204,6 +204,23 @@ func (q *Queries) ListDisbursementsByMerchant(ctx context.Context, arg ListDisbu
 	return items, nil
 }
 
+const sumDisbursementsToday = `-- name: SumDisbursementsToday :one
+SELECT COALESCE(SUM(amount), 0)::BIGINT AS total
+FROM disbursements
+WHERE merchant_id = $1
+  AND status NOT IN ('failed', 'cancelled')
+  AND created_at >= (NOW() AT TIME ZONE 'Asia/Jakarta')::DATE::TIMESTAMPTZ
+`
+
+// Returns total amount disbursed by a merchant today (WIB UTC+7).
+// Excludes failed and cancelled disbursements.
+func (q *Queries) SumDisbursementsToday(ctx context.Context, merchantID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, sumDisbursementsToday, merchantID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const updateDisbursementStatus = `-- name: UpdateDisbursementStatus :one
 UPDATE disbursements
 SET status         = $2,

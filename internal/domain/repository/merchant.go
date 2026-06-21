@@ -22,8 +22,12 @@ type MerchantRepository interface {
 	// Callers must enforce the MaxBankAccounts limit before calling.
 	SaveBankAccount(ctx context.Context, account *entity.MerchantBankAccount) error
 	FindBankAccountsByMerchantID(ctx context.Context, merchantID string) ([]*entity.MerchantBankAccount, error)
+	FindBankAccountByID(ctx context.Context, accountID string) (*entity.MerchantBankAccount, error)
 	FindPrimaryBankAccount(ctx context.Context, merchantID string) (*entity.MerchantBankAccount, error)
 	UpdateBankAccount(ctx context.Context, account *entity.MerchantBankAccount) error
+	// UnsetPrimaryBankAccounts clears the is_primary flag on all accounts for a merchant.
+	// Call before setting a new primary to maintain the single-primary invariant.
+	UnsetPrimaryBankAccounts(ctx context.Context, merchantID string) error
 	DeleteBankAccount(ctx context.Context, accountID string) error
 	CountBankAccounts(ctx context.Context, merchantID string) (int, error)
 }

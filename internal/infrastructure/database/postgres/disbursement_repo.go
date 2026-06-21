@@ -162,3 +162,11 @@ func (r *disbursementRepo) List(ctx context.Context, f repository.ListDisburseme
 	}
 	return result, total, nil
 }
+
+func (r *disbursementRepo) SumDisbursementsToday(ctx context.Context, merchantID string) (int64, error) {
+	total, err := r.queries(ctx).SumDisbursementsToday(ctx, merchantID)
+	if err != nil {
+		return 0, fmt.Errorf("sum disbursements today: %w", err)
+	}
+	return total, nil
+}

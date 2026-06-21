@@ -37,3 +37,12 @@ LIMIT $2 OFFSET $3;
 -- name: CountDisbursementsByMerchant :one
 SELECT COUNT(*) FROM disbursements
 WHERE merchant_id = $1;
+
+-- name: SumDisbursementsToday :one
+-- Returns total amount disbursed by a merchant today (WIB UTC+7).
+-- Excludes failed and cancelled disbursements.
+SELECT COALESCE(SUM(amount), 0)::BIGINT AS total
+FROM disbursements
+WHERE merchant_id = $1
+  AND status NOT IN ('failed', 'cancelled')
+  AND created_at >= (NOW() AT TIME ZONE 'Asia/Jakarta')::DATE::TIMESTAMPTZ;
