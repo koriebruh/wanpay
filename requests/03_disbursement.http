@@ -1,0 +1,87 @@
+# ─────────────────────────────────────────────────────────────
+# Disbursement — Cash Out ke Rekening Bank
+#
+# Prasyarat:
+#   - Merchant harus punya saldo (lihat 04_mutation.http untuk cek balance)
+#   - Merchant harus active dan CanTransact() = true
+#   - Provider harus support disbursement: xendit atau doku
+# ─────────────────────────────────────────────────────────────
+
+@baseUrl        = http://localhost:8080
+@apiKey         = wpay_test_GANTI_DENGAN_API_KEY_DARI_RESPONSE
+@disbursementId = GANTI_DENGAN_DISBURSEMENT_ID
+
+
+### 1. Disbursement via Xendit ke BCA
+POST {{baseUrl}}/v1/disbursements
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: disb-xendit-001
+
+{
+  "provider": "xendit",
+  "bank_code": "BCA",
+  "account_number": "1234567890",
+  "account_name": "Budi Santoso",
+  "amount": 500000,
+  "currency": "IDR",
+  "description": "Pencairan saldo mingguan"
+}
+
+
+### 2. Disbursement via DOKU ke Mandiri
+POST {{baseUrl}}/v1/disbursements
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: disb-doku-001
+
+{
+  "provider": "doku",
+  "bank_code": "MANDIRI",
+  "account_number": "1370012345678",
+  "account_name": "Siti Rahayu",
+  "amount": 250000,
+  "currency": "IDR",
+  "description": "Refund order #98765"
+}
+
+
+### 3. Get detail disbursement
+GET {{baseUrl}}/v1/disbursements/{{disbursementId}}
+X-API-Key: {{apiKey}}
+
+
+### ERROR CASES ─────────────────────────────────────────────
+
+### Provider tidak support disbursement (midtrans/ipaymu) → 400 Bad Request
+POST {{baseUrl}}/v1/disbursements
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: disb-error-001
+
+{
+  "provider": "midtrans",
+  "bank_code": "BCA",
+  "account_number": "1234567890",
+  "account_name": "Test",
+  "amount": 100000,
+  "currency": "IDR",
+  "description": "Test — should fail"
+}
+
+
+### Saldo tidak cukup → 422 Unprocessable Entity
+POST {{baseUrl}}/v1/disbursements
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: disb-error-002
+
+{
+  "provider": "xendit",
+  "bank_code": "BCA",
+  "account_number": "1234567890",
+  "account_name": "Test",
+  "amount": 999999999999,
+  "currency": "IDR",
+  "description": "Test — saldo tidak cukup"
+}

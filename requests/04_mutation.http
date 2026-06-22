@@ -1,0 +1,53 @@
+# ─────────────────────────────────────────────────────────────
+# Mutation — Ledger & Saldo
+#
+# Mutations dibuat otomatis oleh sistem:
+#   - cash_in  → saat payment webhook diterima (status: paid)
+#   - cash_out → saat disbursement selesai (status: completed)
+#
+# Untuk test ini, jalankan dulu webhook simulation di 05_webhook.http
+# ─────────────────────────────────────────────────────────────
+
+@baseUrl    = http://localhost:8080
+@apiKey     = wpay_test_GANTI_DENGAN_API_KEY_DARI_RESPONSE
+@mutationId = GANTI_DENGAN_MUTATION_ID
+
+
+### 1. Cek saldo merchant
+GET {{baseUrl}}/v1/mutations/balance
+X-API-Key: {{apiKey}}
+
+
+### 2. List semua mutasi (default: page 1, limit 20)
+GET {{baseUrl}}/v1/mutations
+X-API-Key: {{apiKey}}
+
+
+### 3. List mutasi dengan pagination
+GET {{baseUrl}}/v1/mutations?page=1&limit=10
+X-API-Key: {{apiKey}}
+
+
+### 4. Filter mutasi cash_in saja
+GET {{baseUrl}}/v1/mutations?type=cash_in
+X-API-Key: {{apiKey}}
+
+
+### 5. Filter mutasi cash_out saja
+GET {{baseUrl}}/v1/mutations?type=cash_out
+X-API-Key: {{apiKey}}
+
+
+### 6. Filter mutasi berdasarkan tanggal (RFC3339)
+GET {{baseUrl}}/v1/mutations?start_date=2026-06-01T00:00:00Z&end_date=2026-06-30T23:59:59Z
+X-API-Key: {{apiKey}}
+
+
+### 7. Filter kombinasi: cash_in bulan ini
+GET {{baseUrl}}/v1/mutations?type=cash_in&start_date=2026-06-01T00:00:00Z&limit=5
+X-API-Key: {{apiKey}}
+
+
+### 8. Get detail satu mutasi (isi mutationId dulu)
+GET {{baseUrl}}/v1/mutations/{{mutationId}}
+X-API-Key: {{apiKey}}

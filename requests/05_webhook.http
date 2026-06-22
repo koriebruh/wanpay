@@ -1,0 +1,239 @@
+# ─────────────────────────────────────────────────────────────
+# Webhook Simulation — Simulasi Notifikasi dari Provider
+#
+# Endpoint ini dipanggil oleh provider saat status payment berubah.
+# Untuk test, kita simulasikan request yang biasanya datang dari provider.
+#
+# PENTING:
+#   - Isi externalId dengan nilai dari response payment/disbursement
+#   - Signature harus valid — lihat catatan per provider di bawah
+#   - Webhook route tidak memerlukan X-API-Key
+#
+# Cara dapat externalId:
+#   1. Buat payment via 02_payment.http
+#   2. Lihat field "external_id" di response
+# ─────────────────────────────────────────────────────────────
+
+@baseUrl    = http://localhost:8080
+
+# Isi dengan external_id dari response payment
+@externalId = wpay-1234567890-abcdef12
+
+
+# ══════════════════════════════════════════════════════════════
+# MIDTRANS
+# Signature: SHA512(order_id + status_code + gross_amount + server_key)
+# Tools: echo -n "wpay-xxx200100000.00<server_key>" | sha512sum
+# ══════════════════════════════════════════════════════════════
+
+### Midtrans — VA BCA settlement (pembayaran berhasil)
+# signature_key = SHA512(order_id + "200" + "100000.00" + server_key)
+# Gunakan server_key dari .config.toml → [provider.midtrans] server_key
+POST {{baseUrl}}/webhooks/midtrans/payment
+Content-Type: application/json
+
+{
+  "order_id": "{{externalId}}",
+  "transaction_id": "midtrans-txn-123456",
+  "status_code": "200",
+  "gross_amount": "100000.00",
+  "payment_type": "bank_transfer",
+  "transaction_status": "settlement",
+  "fraud_status": "accept",
+  "signature_key": "GANTI_DENGAN_SHA512_YANG_VALID",
+  "transaction_time": "2026-06-21 10:30:00",
+  "settlement_time": "2026-06-21 10:31:00",
+  "va_numbers": [
+    {
+      "bank": "bca",
+      "va_number": "1234560000099999"
+    }
+  ]
+}
+
+
+### Midtrans — QRIS settlement
+POST {{baseUrl}}/webhooks/midtrans/payment
+Content-Type: application/json
+
+{
+  "order_id": "{{externalId}}",
+  "transaction_id": "midtrans-txn-qris-001",
+  "status_code": "200",
+  "gross_amount": "50000.00",
+  "payment_type": "qris",
+  "transaction_status": "settlement",
+  "fraud_status": "accept",
+  "signature_key": "GANTI_DENGAN_SHA512_YANG_VALID",
+  "transaction_time": "2026-06-21 11:00:00",
+  "settlement_time": "2026-06-21 11:00:05"
+}
+
+
+### Midtrans — Expire (VA tidak dibayar sampai expired)
+POST {{baseUrl}}/webhooks/midtrans/payment
+Content-Type: application/json
+
+{
+  "order_id": "{{externalId}}",
+  "transaction_id": "midtrans-txn-expired",
+  "status_code": "407",
+  "gross_amount": "100000.00",
+  "payment_type": "bank_transfer",
+  "transaction_status": "expire",
+  "signature_key": "GANTI_DENGAN_SHA512_YANG_VALID",
+  "transaction_time": "2026-06-21 10:30:00"
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# XENDIT
+# Auth: x-callback-token header (static token, tidak pakai HMAC)
+# Token diambil dari .config.toml → [provider.xendit] webhook_token
+# ══════════════════════════════════════════════════════════════
+
+### Xendit — Payment Request SUCCEEDED
+POST {{baseUrl}}/webhooks/xendit/payment
+Content-Type: application/json
+x-callback-token: GANTI_DENGAN_XENDIT_WEBHOOK_TOKEN
+
+{
+  "id": "pr-xendit-123456",
+  "reference_id": "{{externalId}}",
+  "status": "SUCCEEDED",
+  "currency": "IDR",
+  "amount": 200000,
+  "payment_method": {
+    "type": "VIRTUAL_ACCOUNT",
+    "virtual_account": {
+      "channel_code": "BNI",
+      "channel_properties": {
+        "virtual_account_number": "9876540000123456"
+      }
+    }
+  },
+  "created": "2026-06-21T10:00:00Z",
+  "updated": "2026-06-21T10:05:00Z"
+}
+
+
+### Xendit — Payment Request FAILED
+POST {{baseUrl}}/webhooks/xendit/payment
+Content-Type: application/json
+x-callback-token: GANTI_DENGAN_XENDIT_WEBHOOK_TOKEN
+
+{
+  "id": "pr-xendit-failed-001",
+  "reference_id": "{{externalId}}",
+  "status": "FAILED",
+  "currency": "IDR",
+  "amount": 200000,
+  "failure_code": "PAYMENT_CANCELLED",
+  "created": "2026-06-21T10:00:00Z",
+  "updated": "2026-06-21T10:05:00Z"
+}
+
+
+### Xendit — Disbursement COMPLETED
+# Isi reference_id dengan external_id dari disbursement
+POST {{baseUrl}}/webhooks/xendit/disbursement
+Content-Type: application/json
+x-callback-token: GANTI_DENGAN_XENDIT_WEBHOOK_TOKEN
+
+{
+  "id": "disb-xendit-001",
+  "reference_id": "{{externalId}}",
+  "status": "SUCCEEDED",
+  "amount": 500000,
+  "currency": "IDR",
+  "channel_code": "BCA",
+  "account_number": "1234567890",
+  "account_holder_name": "Budi Santoso",
+  "created": "2026-06-21T14:00:00Z",
+  "updated": "2026-06-21T14:01:00Z"
+}
+
+
+### Xendit — Disbursement FAILED
+POST {{baseUrl}}/webhooks/xendit/disbursement
+Content-Type: application/json
+x-callback-token: GANTI_DENGAN_XENDIT_WEBHOOK_TOKEN
+
+{
+  "id": "disb-xendit-failed-001",
+  "reference_id": "{{externalId}}",
+  "status": "FAILED",
+  "amount": 500000,
+  "currency": "IDR",
+  "failure_code": "INVALID_ACCOUNT_NUMBER",
+  "created": "2026-06-21T14:00:00Z",
+  "updated": "2026-06-21T14:01:00Z"
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# IPAYMU
+# Auth: tidak ada header auth khusus untuk webhook
+# Body signature diverifikasi oleh adapter iPaymu
+# ══════════════════════════════════════════════════════════════
+
+### iPaymu — Payment berhasil (status: berhasil)
+POST {{baseUrl}}/webhooks/ipaymu/payment
+Content-Type: application/json
+
+{
+  "trx_id": "12345678",
+  "reference_id": "{{externalId}}",
+  "status": "berhasil",
+  "via": "qris",
+  "channel": "qris",
+  "price": "50000",
+  "buyer_name": "Dewi Lestari",
+  "buyer_email": "dewi@example.com",
+  "notes": "Pembelian produk digital"
+}
+
+
+### iPaymu — Payment expired
+POST {{baseUrl}}/webhooks/ipaymu/payment
+Content-Type: application/json
+
+{
+  "trx_id": "12345679",
+  "reference_id": "{{externalId}}",
+  "status": "expired",
+  "via": "va",
+  "channel": "bni",
+  "price": "75000"
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# DOKU
+# Signature: HMAC-SHA512 hex (diverifikasi oleh adapter DOKU)
+# ══════════════════════════════════════════════════════════════
+
+### DOKU — VA payment success
+POST {{baseUrl}}/webhooks/doku/payment
+Content-Type: application/json
+Client-Id: GANTI_DENGAN_DOKU_CLIENT_ID
+Request-Id: req-doku-001
+Request-Timestamp: 2026-06-21T10:30:00Z
+Signature: HMAC-SHA512:GANTI_DENGAN_SIGNATURE_VALID
+
+{
+  "order": {
+    "invoice_number": "{{externalId}}",
+    "amount": 150000
+  },
+  "virtual_account_info": {
+    "virtual_account_number": "89989009876543210",
+    "bank_code": "BCA"
+  },
+  "service": {
+    "id": "VA"
+  },
+  "acquirer": {
+    "id": "BCA_VA"
+  }
+}

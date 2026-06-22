@@ -11,18 +11,30 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/labstack/echo/v4"
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 
 	deliveryHTTP "wanpey/core/internal/delivery/http"
+	"wanpey/core/internal/delivery/http/handler"
+	"wanpey/core/internal/domain/entity"
+	"wanpey/core/internal/domain/gateway"
 	"wanpey/core/internal/infrastructure/cache"
 	"wanpey/core/internal/infrastructure/config"
 	"wanpey/core/internal/infrastructure/database"
 	"wanpey/core/internal/infrastructure/database/postgres"
 	"wanpey/core/internal/infrastructure/logger"
+	cbprovider "wanpey/core/internal/infrastructure/provider"
+	"wanpey/core/internal/infrastructure/provider/doku"
+	"wanpey/core/internal/infrastructure/provider/ipaymu"
+	"wanpey/core/internal/infrastructure/provider/midtrans"
+	"wanpey/core/internal/infrastructure/provider/xendit"
+	"wanpey/core/internal/infrastructure/taskqueue"
+	"wanpey/core/internal/infrastructure/taskqueue/treasury"
 	"wanpey/core/internal/infrastructure/telemetry"
 	"wanpey/core/internal/infrastructure/worker"
+	"wanpey/core/internal/usecase/impl"
 )
 
 const workerDrainTimeout = 15 * time.Second
@@ -33,6 +45,8 @@ type App struct {
 	workerWg     sync.WaitGroup
 	shutdownOnce sync.Once
 	shutdownErr  error
+	asynqSrv     *asynq.Server
+	asynqSched   *asynq.Scheduler
 }
 
 func New() *App {
@@ -87,9 +101,100 @@ func (a *App) Run() error {
 	db := do.MustInvoke[database.SQLDB](a.injector)
 	c := do.MustInvoke[cache.Cache](a.injector)
 
+	// Repositories 
+	merchantRepo := postgres.NewMerchantRepo(db)
+	paymentRepo := postgres.NewPaymentRepo(db)
+	disbursementRepo := postgres.NewDisbursementRepo(db)
+	mutationRepo := postgres.NewMutationRepo(db)
+	auditRepo := postgres.NewAuditRepo(db)
+	outboxRepo := postgres.NewOutboxRepo(db)
+
+	// Payment gateways
+	cbCfg := cfg.Provider.CircuitBreaker
+	payGWs := make(map[entity.Provider]gateway.PaymentGateway)
+	disbGWs := make(map[entity.Provider]gateway.DisbursementGateway)
+
+	if cfg.Provider.Midtrans.Enabled {
+		gw, err := midtrans.New(cfg.Provider.Midtrans, log)
+		if err != nil {
+			return fmt.Errorf("midtrans init: %w", err)
+		}
+		payGWs[entity.ProviderMidtrans] = cbprovider.NewCBPaymentGateway(gw, cbCfg, log)
+		log.Info("midtrans gateway enabled")
+	}
+
+	if cfg.Provider.Xendit.Enabled {
+		gw, err := xendit.New(cfg.Provider.Xendit, log)
+		if err != nil {
+			return fmt.Errorf("xendit init: %w", err)
+		}
+		payGWs[entity.ProviderXendit] = cbprovider.NewCBPaymentGateway(gw, cbCfg, log)
+		disbGWs[entity.ProviderXendit] = cbprovider.NewCBDisbursementGateway(gw, cbCfg, log)
+		log.Info("xendit gateway enabled")
+	}
+
+	if cfg.Provider.Doku.Enabled {
+		gw, err := doku.New(cfg.Provider.Doku, log)
+		if err != nil {
+			return fmt.Errorf("doku init: %w", err)
+		}
+		payGWs[entity.ProviderDoku] = cbprovider.NewCBPaymentGateway(gw, cbCfg, log)
+		disbGWs[entity.ProviderDoku] = cbprovider.NewCBDisbursementGateway(gw, cbCfg, log)
+		log.Info("doku gateway enabled")
+	}
+
+	if cfg.Provider.IPaymu.Enabled {
+		gw, err := ipaymu.New(cfg.Provider.IPaymu, log)
+		if err != nil {
+			return fmt.Errorf("ipaymu init: %w", err)
+		}
+		payGWs[entity.ProviderIPaymu] = cbprovider.NewCBPaymentGateway(gw, cbCfg, log)
+		log.Info("ipaymu gateway enabled")
+	}
+
+	if len(payGWs) == 0 {
+		log.Warn("no payment gateways enabled — payment creation will fail at runtime")
+	}
+
+	// Usecases
+	paymentUC := impl.NewPaymentUsecase(payGWs, paymentRepo, mutationRepo, auditRepo, outboxRepo, merchantRepo, db, log)
+	disbursementUC := impl.NewDisbursementUsecase(disbGWs, disbursementRepo, mutationRepo, outboxRepo, merchantRepo, db, log)
+	mutationUC := impl.NewMutationUsecase(mutationRepo)
+	merchantUC := impl.NewMerchantUsecase(merchantRepo, mutationRepo)
+
+	// Task queue (optional — requires Redis)
+	if cfg.TaskQueue.Enabled && cfg.Redis.Enabled {
+		providerBalanceRepo := postgres.NewProviderBalanceRepo(db)
+
+		client, err := taskqueue.ProvideClient(cfg.Redis)
+		if err != nil {
+			return fmt.Errorf("asynq client: %w", err)
+		}
+
+		treasuryHandler := treasury.NewHandler(providerBalanceRepo, client, cfg.TaskQueue.Treasury, log)
+
+		srv, sched, err := taskqueue.ProvideServer(cfg.TaskQueue, cfg.Redis, treasuryHandler, log)
+		if err != nil {
+			return fmt.Errorf("asynq server: %w", err)
+		}
+		a.asynqSrv = srv
+		a.asynqSched = sched
+	}
+
+	// HTTP routes
 	e.GET("/health", healthHandler(db, c))
 
-	// Start workers under a cancellable context stored on App so Shutdown can reach them.
+	deliveryHTTP.Register(e, deliveryHTTP.Routes{
+		MerchantRepo: merchantRepo,
+		Cache:        c,
+		Payment:      handler.NewPaymentHandler(paymentUC),
+		Disbursement: handler.NewDisbursementHandler(disbursementUC),
+		Mutation:     handler.NewMutationHandler(mutationUC),
+		Merchant:     handler.NewMerchantHandler(merchantUC),
+		Webhook:      handler.NewWebhookHandler(paymentUC, disbursementUC),
+	})
+
+	// Outbox worker
 	workerCtx, cancel := context.WithCancel(context.Background())
 	a.stopWorkers = cancel
 
@@ -99,6 +204,7 @@ func (a *App) Run() error {
 		worker.NewOutboxWorker(db, log).Run(workerCtx)
 	}()
 
+	// HTTP server
 	serverErr := make(chan error, 1)
 	go func() {
 		log.Info("http server listening", zap.String("port", cfg.App.Port))
@@ -131,10 +237,11 @@ func (a *App) Run() error {
 
 // Shutdown stops all components in the correct order for a financial application:
 //
-//  1. HTTP drain    — stop accepting new requests, wait for in-flight to complete
-//  2. Worker drain  — cancel worker context, wait for goroutines to exit cleanly
-//  3. Logger flush  — ensure all audit logs are written before infra closes
-//  4. Infra close   — samber/do shuts down in reverse-registration order (Echo → Redis → Postgres → Tracer)
+//  1. HTTP drain     — stop accepting new requests, wait for in-flight to complete
+//  2. Asynq drain    — stop scheduler (no new tasks), drain in-flight tasks
+//  3. Worker drain   — cancel outbox worker context, wait for goroutines to exit
+//  4. Logger flush   — ensure all audit logs are written before infra closes
+//  5. Infra close    — samber/do shuts down in reverse-registration order
 //
 // Safe to call multiple times — subsequent calls return the first call's error immediately.
 func (a *App) Shutdown() error {
@@ -182,7 +289,7 @@ func (a *App) shutdown() error {
 	timeout := time.Duration(cfg.App.Shutdown.TimeoutSeconds) * time.Second
 	log.Info("graceful shutdown started", zap.Duration("timeout", timeout))
 
-	// Stage 1: HTTP drain
+	// Stage 1: HTTP drain — stop accepting requests, wait for in-flight handlers.
 	httpCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	if err := e.Shutdown(httpCtx); err != nil {
@@ -190,7 +297,19 @@ func (a *App) shutdown() error {
 	}
 	log.Info("http server drained")
 
-	// Stage 2: Worker drain — cancel context then wait with a hard deadline.
+	// Stage 2: Asynq drain — scheduler first (no new tasks), then server (in-flight tasks).
+	// Must happen before worker/DB close so in-flight financial tasks can write to DB.
+	if a.asynqSched != nil {
+		a.asynqSched.Shutdown()
+	}
+	if a.asynqSrv != nil {
+		a.asynqSrv.Stop()
+	}
+	if a.asynqSrv != nil || a.asynqSched != nil {
+		log.Info("asynq drained")
+	}
+
+	// Stage 3: Outbox worker drain — cancel context then wait with a hard deadline.
 	// Workers must stop BEFORE infra closes or DB queries will hit "sql: database is closed".
 	if a.stopWorkers != nil {
 		a.stopWorkers()
@@ -209,10 +328,10 @@ func (a *App) shutdown() error {
 		)
 	}
 
-	// Stage 3: Flush logger before infra closes so final audit logs are not lost.
+	// Stage 4: Flush logger before infra closes so final audit logs are not lost.
 	log.Info("shutdown complete")
 	_ = log.Sync() //nolint:errcheck // Sync on stdout/stderr returns an error on some OS; nothing actionable here
 
-	// Stage 4: Close infra in reverse-registration order.
+	// Stage 5: Close infra in reverse-registration order (Echo → Redis → Postgres → Tracer).
 	return a.injector.Shutdown()
 }

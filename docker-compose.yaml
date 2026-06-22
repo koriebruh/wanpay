@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: wanpey
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: md5
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -20,34 +22,35 @@ services:
       start_period: 10s
 
   pgbouncer:
-    image: bitnami/pgbouncer:latest
+    image: edoburu/pgbouncer:latest
     container_name: wanpey-pgbouncer
     restart: unless-stopped
     ports:
       - "127.0.0.1:6432:5432"
     environment:
-      POSTGRESQL_HOST: postgres
-      POSTGRESQL_PORT: "5432"
-      POSTGRESQL_USERNAME: postgres
-      POSTGRESQL_PASSWORD: postgres
-      PGBOUNCER_DATABASE: wanpey
-      PGBOUNCER_POOL_MODE: transaction
-      PGBOUNCER_MAX_CLIENT_CONN: "1000"
-      PGBOUNCER_DEFAULT_POOL_SIZE: "25"
-      PGBOUNCER_MIN_POOL_SIZE: "5"
-      PGBOUNCER_RESERVE_POOL_SIZE: "5"
-      PGBOUNCER_RESERVE_POOL_TIMEOUT: "3"
-      PGBOUNCER_SERVER_IDLE_TIMEOUT: "600"
-      PGBOUNCER_SERVER_LIFETIME: "3600"
-      PGBOUNCER_QUERY_WAIT_TIMEOUT: "15"
-      PGBOUNCER_LOG_CONNECTIONS: "0"
-      PGBOUNCER_LOG_DISCONNECTIONS: "0"
-      PGBOUNCER_IGNORE_STARTUP_PARAMETERS: "extra_float_digits"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: wanpey
+      AUTH_TYPE: md5
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "1000"
+      DEFAULT_POOL_SIZE: "25"
+      MIN_POOL_SIZE: "5"
+      RESERVE_POOL_SIZE: "5"
+      RESERVE_POOL_TIMEOUT: "3"
+      SERVER_IDLE_TIMEOUT: "600"
+      SERVER_LIFETIME: "3600"
+      QUERY_WAIT_TIMEOUT: "15"
+      LOG_CONNECTIONS: "0"
+      LOG_DISCONNECTIONS: "0"
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=postgres psql -h 127.0.0.1 -p 5432 -U postgres -d pgbouncer -c 'SHOW DATABASES;' > /dev/null 2>&1"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5432 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

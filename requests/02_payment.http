@@ -1,0 +1,178 @@
+# ─────────────────────────────────────────────────────────────
+# Payment — VA & QRIS
+#
+# Prasyarat:
+#   - Merchant sudah terdaftar dan active
+#   - Provider credentials sudah diisi di .config.toml
+#   - make migrate-up sudah dijalankan
+#
+# Idempotency: kirim request yang sama dua kali dengan
+# X-Idempotency-Key yang sama → response identik (dari cache)
+# ─────────────────────────────────────────────────────────────
+
+@baseUrl   = http://localhost:8080
+@apiKey    = wpay_test_GANTI_DENGAN_API_KEY_DARI_RESPONSE
+# Isi setelah membuat payment
+@paymentId = GANTI_DENGAN_PAYMENT_ID
+
+
+### 1. Buat VA — Midtrans BCA
+POST {{baseUrl}}/v1/payments/va
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: va-bca-001
+
+{
+  "provider": "midtrans",
+  "bank_code": "BCA",
+  "amount": 150000,
+  "currency": "IDR",
+  "customer_name": "Budi Santoso",
+  "customer_email": "budi@example.com",
+  "customer_phone": "081234567890",
+  "description": "Pembayaran order #12345",
+  "expiry_at": "2026-06-22T23:59:59Z"
+}
+
+
+### 2. Buat VA — Xendit BNI
+POST {{baseUrl}}/v1/payments/va
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: va-bni-001
+
+{
+  "provider": "xendit",
+  "bank_code": "BNI",
+  "amount": 200000,
+  "currency": "IDR",
+  "customer_name": "Siti Rahayu",
+  "customer_email": "siti@example.com",
+  "customer_phone": "081298765432",
+  "description": "Pembayaran langganan bulanan",
+  "expiry_at": "2026-06-22T23:59:59Z"
+}
+
+
+### 3. Buat VA — Midtrans Mandiri
+POST {{baseUrl}}/v1/payments/va
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: va-mandiri-001
+
+{
+  "provider": "midtrans",
+  "bank_code": "MANDIRI",
+  "amount": 75000,
+  "currency": "IDR",
+  "customer_name": "Andi Wijaya",
+  "customer_email": "andi@example.com",
+  "customer_phone": "081355556666",
+  "description": "Top-up saldo",
+  "expiry_at": "2026-06-22T23:59:59Z"
+}
+
+
+### 4. Buat QRIS — Midtrans
+POST {{baseUrl}}/v1/payments/qris
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: qris-midtrans-001
+
+{
+  "provider": "midtrans",
+  "amount": 50000,
+  "currency": "IDR",
+  "customer_name": "Dewi Lestari",
+  "customer_email": "dewi@example.com",
+  "customer_phone": "081244449999",
+  "description": "Pembelian produk digital",
+  "expiry_at": "2026-06-21T12:00:00Z"
+}
+
+
+### 5. Buat QRIS — Xendit
+POST {{baseUrl}}/v1/payments/qris
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: qris-xendit-001
+
+{
+  "provider": "xendit",
+  "amount": 100000,
+  "currency": "IDR",
+  "customer_name": "Rizki Pratama",
+  "customer_email": "rizki@example.com",
+  "customer_phone": "081377778888",
+  "description": "Pembelian tiket event",
+  "expiry_at": "2026-06-21T18:00:00Z"
+}
+
+
+### 6. Get detail payment (isi paymentId dulu)
+GET {{baseUrl}}/v1/payments/{{paymentId}}
+X-API-Key: {{apiKey}}
+
+
+### 7. Cancel payment (hanya yang masih pending)
+DELETE {{baseUrl}}/v1/payments/{{paymentId}}
+X-API-Key: {{apiKey}}
+
+
+### IDEMPOTENCY TEST ─────────────────────────────────────────
+### Kirim request ini dua kali → response ke-2 identik (header X-Idempotency-Replayed: true)
+
+### Idempotency: request pertama
+POST {{baseUrl}}/v1/payments/va
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: idempotency-test-key-001
+
+{
+  "provider": "midtrans",
+  "bank_code": "BRI",
+  "amount": 50000,
+  "currency": "IDR",
+  "customer_name": "Test Idempotency",
+  "customer_email": "test@example.com",
+  "customer_phone": "081200000001",
+  "description": "Test idempotency key",
+  "expiry_at": "2026-06-22T23:59:59Z"
+}
+
+
+### ERROR CASES ─────────────────────────────────────────────
+
+### Provider tidak support → 400 Bad Request
+POST {{baseUrl}}/v1/payments/va
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: va-error-001
+
+{
+  "provider": "unknown_provider",
+  "bank_code": "BCA",
+  "amount": 100000,
+  "currency": "IDR",
+  "customer_name": "Test",
+  "customer_email": "test@example.com",
+  "customer_phone": "081200000000",
+  "expiry_at": "2026-06-22T23:59:59Z"
+}
+
+
+### Amount harus > 0 → 422 Unprocessable Entity
+POST {{baseUrl}}/v1/payments/qris
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+X-Idempotency-Key: qris-error-002
+
+{
+  "provider": "midtrans",
+  "amount": 0,
+  "currency": "IDR",
+  "customer_name": "Test",
+  "customer_email": "test@example.com",
+  "customer_phone": "081200000000",
+  "expiry_at": "2026-06-22T23:59:59Z"
+}

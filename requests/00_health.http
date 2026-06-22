@@ -1,0 +1,8 @@
+# ─────────────────────────────────────────────────────────────
+# Health Check
+# ─────────────────────────────────────────────────────────────
+
+@baseUrl = http://localhost:8080
+
+### Health check — semua komponen harus "ok"
+GET {{baseUrl}}/health

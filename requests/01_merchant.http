@@ -1,0 +1,125 @@
+# ─────────────────────────────────────────────────────────────
+# Merchant — Registration & Management
+#
+# Flow:
+#   1. POST   /v1/merchants              → simpan api_key & webhook_secret dari response
+#   2. GET    /v1/merchants/me           → cek profile
+#   3. PATCH  /v1/merchants/me           → update profile
+#   4. POST   /v1/merchants/me/api-key/regenerate → dapat api_key baru
+#   5. POST   /v1/merchants/me/bank-accounts      → tambah rekening
+#   6. PATCH  /v1/merchants/me/bank-accounts/:id/primary → set primary
+#   7. DELETE /v1/merchants/me/bank-accounts/:id  → hapus rekening
+# ─────────────────────────────────────────────────────────────
+
+@baseUrl  = http://localhost:8080
+# Isi setelah dapat dari response POST /v1/merchants
+@apiKey   = wpay_test_GANTI_DENGAN_API_KEY_DARI_RESPONSE
+# Isi setelah menambah bank account
+@bankAccountId = GANTI_DENGAN_ID_BANK_ACCOUNT
+
+
+### 1. Daftar merchant baru (tidak perlu auth)
+# Response: { api_key, webhook_secret } — simpan, tidak bisa didapat lagi!
+POST {{baseUrl}}/v1/merchants
+Content-Type: application/json
+
+{
+  "name": "Toko Makmur Jaya",
+  "email": "merchant@tokomakmur.com",
+  "phone": "081234567890",
+  "webhook_url": "https://webhook.site/your-unique-id",
+  "fee_config": {
+    "va": {
+      "type": "flat",
+      "amount": 4000
+    },
+    "qris": {
+      "type": "percentage",
+      "percentage": 0.7
+    },
+    "disbursement": {
+      "type": "flat",
+      "amount": 6500
+    }
+  }
+}
+
+
+### 2. Lihat profile merchant
+GET {{baseUrl}}/v1/merchants/me
+X-API-Key: {{apiKey}}
+
+
+### 3. Update profile merchant
+PATCH {{baseUrl}}/v1/merchants/me
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "name": "Toko Makmur Jaya Updated",
+  "webhook_url": "https://webhook.site/your-unique-id-updated"
+}
+
+
+### 4. Regenerate API key (response: api_key baru — simpan!)
+POST {{baseUrl}}/v1/merchants/me/api-key/regenerate
+X-API-Key: {{apiKey}}
+
+
+### 5. Lihat daftar rekening bank
+GET {{baseUrl}}/v1/merchants/me/bank-accounts
+X-API-Key: {{apiKey}}
+
+
+### 6. Tambah rekening bank pertama (set_as_primary: true)
+POST {{baseUrl}}/v1/merchants/me/bank-accounts
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "bank_code": "BCA",
+  "account_number": "1234567890",
+  "account_name": "Budi Santoso",
+  "set_as_primary": true
+}
+
+
+### 7. Tambah rekening bank kedua
+POST {{baseUrl}}/v1/merchants/me/bank-accounts
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "bank_code": "BNI",
+  "account_number": "9876543210",
+  "account_name": "Budi Santoso",
+  "set_as_primary": false
+}
+
+
+### 8. Set rekening lain sebagai primary (isi bankAccountId dulu)
+PATCH {{baseUrl}}/v1/merchants/me/bank-accounts/{{bankAccountId}}/primary
+X-API-Key: {{apiKey}}
+
+
+### 9. Hapus rekening bank (tidak bisa hapus primary)
+DELETE {{baseUrl}}/v1/merchants/me/bank-accounts/{{bankAccountId}}
+X-API-Key: {{apiKey}}
+
+
+### ERROR CASES ─────────────────────────────────────────────
+
+### Email duplikat → 409 Conflict
+POST {{baseUrl}}/v1/merchants
+Content-Type: application/json
+
+{
+  "name": "Duplikat",
+  "email": "merchant@tokomakmur.com",
+  "phone": "081234567890"
+}
+
+
+### API key invalid → 401 Unauthorized
+GET {{baseUrl}}/v1/merchants/me
+X-API-Key: wpay_test_invalidkeyxxxxxxxxxxxxxxxx

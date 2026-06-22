@@ -2,8 +2,9 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  bin = "tmp/main"
-  cmd = "go build -o ./tmp/main ./cmd/api"
+  entrypoint = "tmp/main"
+  cmd        = "go build -o ./tmp/main ./cmd/api"
+  args_bin   = ["serve"]
 
   # Watch .go dan .toml — config change juga trigger reload
   include_ext = ["go", "toml"]
