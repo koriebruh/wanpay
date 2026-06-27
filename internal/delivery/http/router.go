@@ -5,19 +5,22 @@ import (
 
 	"wanpey/core/internal/delivery/http/handler"
 	httpmw "wanpey/core/internal/delivery/http/middleware"
+	"wanpey/core/internal/domain/entity"
 	"wanpey/core/internal/domain/repository"
 	"wanpey/core/internal/infrastructure/cache"
 )
 
 // Routes holds all route handlers and shared middleware dependencies.
 type Routes struct {
-	MerchantRepo repository.MerchantRepository
-	Cache        cache.Cache
-	Payment      *handler.PaymentHandler
-	Disbursement *handler.DisbursementHandler
-	Mutation     *handler.MutationHandler
-	Merchant     *handler.MerchantHandler
-	Webhook      *handler.WebhookHandler
+	MerchantRepo   repository.MerchantRepository
+	Cache          cache.Cache
+	Payment        *handler.PaymentHandler
+	Disbursement   *handler.DisbursementHandler
+	Mutation       *handler.MutationHandler
+	Merchant       *handler.MerchantHandler
+	Webhook        *handler.WebhookHandler
+	Admin          *handler.AdminHandler
+	AdminJWTSecret string
 }
 
 // Register mounts all API routes on the Echo instance.
@@ -51,10 +54,7 @@ func Register(e *echo.Echo, r Routes) {
 	mutations.GET("/balance", r.Mutation.GetBalance)
 	mutations.GET("/:id", r.Mutation.GetMutation)
 
-	// Merchants
-	// POST /v1/merchants — registration, no auth (handled below before the auth group)
-	e.POST("/v1/merchants", r.Merchant.Create)
-
+	// Merchants (self-service — authenticated)
 	me := v1.Group("/merchants/me")
 	me.GET("", r.Merchant.GetMerchant)
 	me.PATCH("", r.Merchant.Update)
@@ -65,4 +65,26 @@ func Register(e *echo.Echo, r Routes) {
 	bankAccounts.POST("", r.Merchant.AddBankAccount)
 	bankAccounts.DELETE("/:id", r.Merchant.RemoveBankAccount)
 	bankAccounts.PATCH("/:id/primary", r.Merchant.SetPrimaryBankAccount)
+
+	registerAdminRoutes(e, r)
+}
+
+// registerAdminRoutes mounts /admin endpoints. Login/refresh are public; the rest
+// require a valid admin access token (JWT). Admin creation is super_admin-only.
+func registerAdminRoutes(e *echo.Echo, r Routes) {
+	if r.Admin == nil {
+		return
+	}
+	admin := e.Group("/admin")
+	admin.POST("/login", r.Admin.Login)
+	admin.POST("/token/refresh", r.Admin.RefreshToken)
+
+	authed := admin.Group("", httpmw.AdminJWTAuth(r.AdminJWTSecret))
+	authed.POST("/admins", r.Admin.CreateAdmin, httpmw.RequireRole(entity.AdminRoleSuperAdmin))
+
+	merchants := authed.Group("/merchants")
+	merchants.POST("", r.Admin.CreateMerchant)
+	merchants.PATCH("/:id/approve", r.Admin.ApproveMerchant)
+	merchants.PATCH("/:id/suspend", r.Admin.SuspendMerchant)
+	merchants.PATCH("/:id/fee", r.Admin.SetMerchantFee)
 }

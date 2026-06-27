@@ -86,30 +86,31 @@ type Outbox struct {
 }
 
 type Payment struct {
-	ID            string          `json:"id"`
-	MerchantID    string          `json:"merchant_id"`
-	ExternalID    string          `json:"external_id"`
-	Method        string          `json:"method"`
-	Provider      string          `json:"provider"`
-	Status        string          `json:"status"`
-	Amount        int64           `json:"amount"`
-	FeeAmount     int64           `json:"fee_amount"`
-	Currency      string          `json:"currency"`
-	Description   string          `json:"description"`
-	CustomerName  string          `json:"customer_name"`
-	CustomerEmail string          `json:"customer_email"`
-	CustomerPhone string          `json:"customer_phone"`
-	VaNumber      string          `json:"va_number"`
-	BankCode      string          `json:"bank_code"`
-	QrString      string          `json:"qr_string"`
-	QrImageUrl    string          `json:"qr_image_url"`
-	ExpiryAt      time.Time       `json:"expiry_at"`
-	PaidAt        sql.NullTime    `json:"paid_at"`
-	FailedAt      sql.NullTime    `json:"failed_at"`
-	CancelledAt   sql.NullTime    `json:"cancelled_at"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
-	Metadata      json.RawMessage `json:"metadata"`
+	ID                string          `json:"id"`
+	MerchantID        string          `json:"merchant_id"`
+	ExternalID        string          `json:"external_id"`
+	ProviderPaymentID string          `json:"provider_payment_id"`
+	Method            string          `json:"method"`
+	Provider          string          `json:"provider"`
+	Status            string          `json:"status"`
+	Amount            int64           `json:"amount"`
+	FeeAmount         int64           `json:"fee_amount"`
+	Currency          string          `json:"currency"`
+	Description       string          `json:"description"`
+	CustomerName      string          `json:"customer_name"`
+	CustomerEmail     string          `json:"customer_email"`
+	CustomerPhone     string          `json:"customer_phone"`
+	VaNumber          string          `json:"va_number"`
+	BankCode          string          `json:"bank_code"`
+	QrString          string          `json:"qr_string"`
+	QrImageUrl        string          `json:"qr_image_url"`
+	ExpiryAt          time.Time       `json:"expiry_at"`
+	PaidAt            sql.NullTime    `json:"paid_at"`
+	FailedAt          sql.NullTime    `json:"failed_at"`
+	CancelledAt       sql.NullTime    `json:"cancelled_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+	Metadata          json.RawMessage `json:"metadata"`
 }
 
 type PaymentAudit struct {

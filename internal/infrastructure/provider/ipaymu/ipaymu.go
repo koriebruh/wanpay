@@ -37,12 +37,13 @@ var vaChannel = map[entity.BankCode]string{
 }
 
 type Gateway struct {
-	apiKey     string
-	va         string
-	baseURL    string
-	notifyURL  string
-	httpClient *http.Client
-	log        *zap.Logger
+	apiKey        string
+	va            string
+	baseURL       string
+	notifyURL     string
+	webhookSecret string
+	httpClient    *http.Client
+	log           *zap.Logger
 }
 
 func New(cfg config.IPaymuConfig, log *zap.Logger) (gateway.PaymentGateway, error) {
@@ -60,13 +61,19 @@ func New(cfg config.IPaymuConfig, log *zap.Logger) (gateway.PaymentGateway, erro
 	if notifyURL == "" {
 		notifyURL = baseURL + "/notify" // fallback — replace with real webhook URL in production
 	}
+	// Append webhook secret as a query param so we can verify callbacks from iPaymu.
+	// iPaymu POSTs to the exact notifyURL including query params.
+	if cfg.WebhookSecret != "" {
+		notifyURL += "?wt=" + cfg.WebhookSecret
+	}
 	return &Gateway{
-		apiKey:     cfg.APIKey,
-		va:         cfg.VA,
-		baseURL:    baseURL,
-		notifyURL:  notifyURL,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
-		log:        log,
+		apiKey:        cfg.APIKey,
+		va:            cfg.VA,
+		baseURL:       baseURL,
+		notifyURL:     notifyURL,
+		webhookSecret: cfg.WebhookSecret,
+		httpClient:    &http.Client{Timeout: 30 * time.Second},
+		log:           log,
 	}, nil
 }
 
@@ -143,7 +150,16 @@ func (g *Gateway) GetStatus(ctx context.Context, providerPaymentID string) (enti
 	return mapStatus(resp.Data.PaidStatus), nil
 }
 
-func (g *Gateway) ParseWebhook(_ context.Context, _ map[string]string, body []byte) (*gateway.WebhookEvent, error) {
+func (g *Gateway) ParseWebhook(_ context.Context, headers map[string]string, body []byte) (*gateway.WebhookEvent, error) {
+	// Verify the webhook token delivered via the ?wt= query param, which the
+	// webhook handler forwards as the "x-wt" pseudo-header.
+	if g.webhookSecret != "" {
+		token := headers["x-wt"]
+		if !hmac.Equal([]byte(token), []byte(g.webhookSecret)) {
+			return nil, fmt.Errorf("ipaymu webhook: invalid token")
+		}
+	}
+
 	var n notification
 	if err := json.Unmarshal(body, &n); err != nil {
 		return nil, fmt.Errorf("ipaymu webhook: unmarshal: %w", err)

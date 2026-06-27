@@ -108,6 +108,7 @@ func (a *App) Run() error {
 	mutationRepo := postgres.NewMutationRepo(db)
 	auditRepo := postgres.NewAuditRepo(db)
 	outboxRepo := postgres.NewOutboxRepo(db)
+	adminRepo := postgres.NewAdminRepo(db)
 
 	// Payment gateways
 	cbCfg := cfg.Provider.CircuitBreaker
@@ -161,6 +162,7 @@ func (a *App) Run() error {
 	disbursementUC := impl.NewDisbursementUsecase(disbGWs, disbursementRepo, mutationRepo, outboxRepo, merchantRepo, db, log)
 	mutationUC := impl.NewMutationUsecase(mutationRepo)
 	merchantUC := impl.NewMerchantUsecase(merchantRepo, mutationRepo)
+	adminUC := impl.NewAdminUsecase(adminRepo, merchantRepo, merchantUC, cfg.Admin)
 
 	// Task queue (optional — requires Redis)
 	if cfg.TaskQueue.Enabled && cfg.Redis.Enabled {
@@ -192,6 +194,8 @@ func (a *App) Run() error {
 		Mutation:     handler.NewMutationHandler(mutationUC),
 		Merchant:     handler.NewMerchantHandler(merchantUC),
 		Webhook:      handler.NewWebhookHandler(paymentUC, disbursementUC),
+		Admin:          handler.NewAdminHandler(adminUC),
+		AdminJWTSecret: cfg.Admin.JWTSecret,
 	})
 
 	// Outbox worker

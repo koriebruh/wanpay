@@ -37,6 +37,12 @@ func ProvideDB(i do.Injector) {
 	})
 }
 
+// Connect opens a standalone Postgres connection for one-shot CLI commands
+// (e.g. seed-admin) that run outside the DI container.
+func Connect(cfg config.DatabaseConfig) (database.SQLDB, error) {
+	return newPostgres(cfg, zap.NewNop())
+}
+
 func newPostgres(cfg config.DatabaseConfig, log *zap.Logger) (*postgresDB, error) {
 	if cfg.MaxOpenConns == 0 {
 		cfg.MaxOpenConns = 25

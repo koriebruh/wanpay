@@ -9,6 +9,9 @@ import (
 )
 
 type Querier interface {
+	GetAdminByID(ctx context.Context, id string) (Admin, error)
+	GetAdminByUsername(ctx context.Context, username string) (Admin, error)
+	InsertAdmin(ctx context.Context, arg InsertAdminParams) (Admin, error)
 	CountBankAccounts(ctx context.Context, merchantID string) (int64, error)
 	CountDisbursementsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	CountMutationsByMerchant(ctx context.Context, merchantID string) (int64, error)
@@ -47,6 +50,9 @@ type Querier interface {
 	// Returns total amount disbursed by a merchant today (WIB UTC+7).
 	// Excludes failed and cancelled disbursements.
 	SumDisbursementsToday(ctx context.Context, merchantID string) (int64, error)
+	// Returns total amount of pending/processing disbursements for a merchant.
+	// Used in balance checks to prevent double-spend before the provider confirms.
+	SumPendingDisbursements(ctx context.Context, merchantID string) (int64, error)
 	UnsetPrimaryBankAccounts(ctx context.Context, merchantID string) error
 	UpdateBankAccount(ctx context.Context, arg UpdateBankAccountParams) (MerchantBankAccount, error)
 	UpdateDisbursementStatus(ctx context.Context, arg UpdateDisbursementStatusParams) (Disbursement, error)

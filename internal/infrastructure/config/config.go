@@ -17,6 +17,13 @@ type Config struct {
 	OTEL      OTELConfig      `toml:"otel"`
 	Fee       FeeConfig       `toml:"fee"`
 	TaskQueue TaskQueueConfig `toml:"taskqueue"`
+	Admin     AdminConfig     `toml:"admin"`
+}
+
+type AdminConfig struct {
+	JWTSecret            string `toml:"jwt_secret"`              // HMAC-SHA256 key for signing JWT tokens
+	AccessTokenTTLHours  int    `toml:"access_token_ttl_hours"`  // default: 8
+	RefreshTokenTTLHours int    `toml:"refresh_token_ttl_hours"` // default: 168 (7 days)
 }
 
 type OTELConfig struct {
@@ -89,11 +96,12 @@ type ProviderConfig struct {
 }
 
 type IPaymuConfig struct {
-	Enabled      bool   `toml:"enabled"`
-	APIKey       string `toml:"api_key"`
-	VA           string `toml:"va"` // merchant's VA number from iPaymu dashboard
-	IsProduction bool   `toml:"is_production"`
-	NotifyURL    string `toml:"notify_url"` // webhook callback URL for payment notifications
+	Enabled       bool   `toml:"enabled"`
+	APIKey        string `toml:"api_key"`
+	VA            string `toml:"va"`            // merchant's VA number from iPaymu dashboard
+	IsProduction  bool   `toml:"is_production"`
+	NotifyURL     string `toml:"notify_url"`    // webhook callback URL (without token — token appended automatically)
+	WebhookSecret string `toml:"webhook_secret"` // random secret appended as ?wt= to notifyURL for verification
 }
 
 type CircuitBreakerConfig struct {
@@ -123,6 +131,7 @@ type DokuConfig struct {
 	SecretKey     string `toml:"secret_key"`
 	APIKey        string `toml:"api_key"`
 	PrivateKeyPEM string `toml:"private_key"`
+	IsProduction  bool   `toml:"is_production"`
 }
 
 // FeeConfig holds platform-wide margin settings applied on top of each merchant's FeeConfig.

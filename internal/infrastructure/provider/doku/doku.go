@@ -41,8 +41,8 @@ const (
 
 type Gateway struct {
 	clientID   string
-	secretKey  string // Active Secret Key from dashboard
-	hmacKey    string // API Key from dashboard — used for HMAC-SHA512 request signatures
+	secretKey  string // Secret Key from dashboard — used for HMAC-SHA512 request signatures
+	hmacKey    string // same as secretKey; kept as a named field for signing calls
 	privateKey *rsa.PrivateKey
 	baseURL    string
 	httpClient *http.Client
@@ -69,10 +69,13 @@ func New(cfg config.DokuConfig, log *zap.Logger) (*Gateway, error) {
 		return nil, fmt.Errorf("doku: parse private_key_pem: %w", err)
 	}
 
-	// clientSecret for HMAC request signatures — api_key from dashboard
-	hmacKey := strings.TrimSpace(cfg.APIKey)
-	if hmacKey == "" {
-		hmacKey = strings.TrimSpace(cfg.SecretKey)
+	// DOKU SNAP: transactional requests are signed with Secret Key (not API Key).
+	// Secret Key is found in DOKU dashboard under "Merchant Credential" → "Secret Key".
+	hmacKey := strings.TrimSpace(cfg.SecretKey)
+
+	baseURL := sandboxBaseURL
+	if cfg.IsProduction {
+		baseURL = productionBaseURL
 	}
 
 	return &Gateway{
@@ -80,7 +83,7 @@ func New(cfg config.DokuConfig, log *zap.Logger) (*Gateway, error) {
 		secretKey:  cfg.SecretKey,
 		hmacKey:    hmacKey,
 		privateKey: privateKey,
-		baseURL:    sandboxBaseURL,
+		baseURL:    baseURL,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 		log:        log,
 	}, nil
@@ -346,10 +349,7 @@ func (g *Gateway) post(ctx context.Context, path, externalID string, body any, d
 
 	ts := timestamp()
 	bodyHash := strings.ToLower(hex.EncodeToString(sha256Sum(b)))
-	_ = "POST:" + path + ":" + token + ":" + bodyHash + ":" + ts // for reference
-	// Try variants — DOKU docs are ambiguous on exact format
-	// TODO: X-SIGNATURE still failing. Tried: HMAC-SHA256/512 + hex/base64 with api_key and secret_key.
-	// Contact DOKU support to confirm which dashboard credential maps to clientSecret for HMAC signing.
+	// DOKU SNAP BI-SNAP: stringToSign = HTTP_METHOD:ENDPOINT_URL:ACCESS_TOKEN:SHA256_LOWER_HEX(body):TIMESTAMP
 	sig := hmacSHA512hex512(g.hmacKey, "POST:"+path+":"+token+":"+bodyHash+":"+ts)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, g.baseURL+path, bytes.NewReader(b))
@@ -435,8 +435,7 @@ func sha256Sum(b []byte) []byte {
 }
 
 // hmacSHA512hex512 returns lowercase hex-encoded HMAC-SHA512 for transactional request signatures.
-// DOKU docs: "Algorithm symmetric signature HMAC_SHA512(clientSecret, stringToSign)"
-// TODO: signature still failing — confirm clientSecret mapping with DOKU support.
+// DOKU docs: "Algorithm symmetric signature HMAC_SHA512(clientSecret, stringToSign)" — key is Secret Key.
 func hmacSHA512hex512(secret, data string) string {
 	h := hmac.New(sha512.New, []byte(secret))
 	h.Write([]byte(data))

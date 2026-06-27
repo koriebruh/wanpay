@@ -25,7 +25,7 @@ func (q *Queries) CountPaymentsByMerchant(ctx context.Context, merchantID string
 }
 
 const getPaymentByExternalID = `-- name: GetPaymentByExternalID :one
-SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
+SELECT id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
 WHERE provider = $1 AND external_id = $2
 `
 
@@ -41,6 +41,7 @@ func (q *Queries) GetPaymentByExternalID(ctx context.Context, arg GetPaymentByEx
 		&i.ID,
 		&i.MerchantID,
 		&i.ExternalID,
+		&i.ProviderPaymentID,
 		&i.Method,
 		&i.Provider,
 		&i.Status,
@@ -67,7 +68,7 @@ func (q *Queries) GetPaymentByExternalID(ctx context.Context, arg GetPaymentByEx
 }
 
 const getPaymentByID = `-- name: GetPaymentByID :one
-SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
+SELECT id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
 WHERE id = $1
 `
 
@@ -78,6 +79,7 @@ func (q *Queries) GetPaymentByID(ctx context.Context, id string) (Payment, error
 		&i.ID,
 		&i.MerchantID,
 		&i.ExternalID,
+		&i.ProviderPaymentID,
 		&i.Method,
 		&i.Provider,
 		&i.Status,
@@ -105,45 +107,47 @@ func (q *Queries) GetPaymentByID(ctx context.Context, id string) (Payment, error
 
 const insertPayment = `-- name: InsertPayment :one
 INSERT INTO payments (
-    id, merchant_id, external_id, method, provider, status,
+    id, merchant_id, external_id, provider_payment_id, method, provider, status,
     amount, fee_amount, currency, description,
     customer_name, customer_email, customer_phone,
     va_number, bank_code, qr_string, qr_image_url,
     expiry_at, metadata
 ) VALUES (
-    gen_random_uuid(), $1, $2, $3, $4, $5,
-    $6, $7, $8, $9,
-    $10, $11, $12,
-    $13, $14, $15, $16,
-    $17, $18
-) RETURNING id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata
+    gen_random_uuid(), $1, $2, $3, $4, $5, $6,
+    $7, $8, $9, $10,
+    $11, $12, $13,
+    $14, $15, $16, $17,
+    $18, $19
+) RETURNING id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata
 `
 
 type InsertPaymentParams struct {
-	MerchantID    string          `json:"merchant_id"`
-	ExternalID    string          `json:"external_id"`
-	Method        string          `json:"method"`
-	Provider      string          `json:"provider"`
-	Status        string          `json:"status"`
-	Amount        int64           `json:"amount"`
-	FeeAmount     int64           `json:"fee_amount"`
-	Currency      string          `json:"currency"`
-	Description   string          `json:"description"`
-	CustomerName  string          `json:"customer_name"`
-	CustomerEmail string          `json:"customer_email"`
-	CustomerPhone string          `json:"customer_phone"`
-	VaNumber      string          `json:"va_number"`
-	BankCode      string          `json:"bank_code"`
-	QrString      string          `json:"qr_string"`
-	QrImageUrl    string          `json:"qr_image_url"`
-	ExpiryAt      time.Time       `json:"expiry_at"`
-	Metadata      json.RawMessage `json:"metadata"`
+	MerchantID        string          `json:"merchant_id"`
+	ExternalID        string          `json:"external_id"`
+	ProviderPaymentID string          `json:"provider_payment_id"`
+	Method            string          `json:"method"`
+	Provider          string          `json:"provider"`
+	Status            string          `json:"status"`
+	Amount            int64           `json:"amount"`
+	FeeAmount         int64           `json:"fee_amount"`
+	Currency          string          `json:"currency"`
+	Description       string          `json:"description"`
+	CustomerName      string          `json:"customer_name"`
+	CustomerEmail     string          `json:"customer_email"`
+	CustomerPhone     string          `json:"customer_phone"`
+	VaNumber          string          `json:"va_number"`
+	BankCode          string          `json:"bank_code"`
+	QrString          string          `json:"qr_string"`
+	QrImageUrl        string          `json:"qr_image_url"`
+	ExpiryAt          time.Time       `json:"expiry_at"`
+	Metadata          json.RawMessage `json:"metadata"`
 }
 
 func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error) {
 	row := q.db.QueryRowContext(ctx, insertPayment,
 		arg.MerchantID,
 		arg.ExternalID,
+		arg.ProviderPaymentID,
 		arg.Method,
 		arg.Provider,
 		arg.Status,
@@ -166,6 +170,7 @@ func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (P
 		&i.ID,
 		&i.MerchantID,
 		&i.ExternalID,
+		&i.ProviderPaymentID,
 		&i.Method,
 		&i.Provider,
 		&i.Status,
@@ -192,7 +197,7 @@ func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (P
 }
 
 const listPaymentsByMerchant = `-- name: ListPaymentsByMerchant :many
-SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
+SELECT id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
 WHERE merchant_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -217,6 +222,7 @@ func (q *Queries) ListPaymentsByMerchant(ctx context.Context, arg ListPaymentsBy
 			&i.ID,
 			&i.MerchantID,
 			&i.ExternalID,
+			&i.ProviderPaymentID,
 			&i.Method,
 			&i.Provider,
 			&i.Status,
@@ -254,14 +260,14 @@ func (q *Queries) ListPaymentsByMerchant(ctx context.Context, arg ListPaymentsBy
 
 const updatePaymentStatus = `-- name: UpdatePaymentStatus :one
 UPDATE payments
-SET status       = $2,
-    fee_amount   = $3,
-    paid_at      = $4,
-    failed_at    = $5,
-    cancelled_at = $6,
-    updated_at   = NOW()
+SET status             = $2,
+    fee_amount         = $3,
+    paid_at            = $4,
+    failed_at          = $5,
+    cancelled_at       = $6,
+    updated_at         = NOW()
 WHERE id = $1
-RETURNING id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata
+RETURNING id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata
 `
 
 type UpdatePaymentStatusParams struct {
@@ -287,6 +293,7 @@ func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStat
 		&i.ID,
 		&i.MerchantID,
 		&i.ExternalID,
+		&i.ProviderPaymentID,
 		&i.Method,
 		&i.Provider,
 		&i.Status,

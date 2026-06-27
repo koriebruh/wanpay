@@ -170,3 +170,11 @@ func (r *disbursementRepo) SumDisbursementsToday(ctx context.Context, merchantID
 	}
 	return total, nil
 }
+
+func (r *disbursementRepo) SumPendingDisbursements(ctx context.Context, merchantID string) (int64, error) {
+	total, err := r.queries(ctx).SumPendingDisbursements(ctx, merchantID)
+	if err != nil {
+		return 0, fmt.Errorf("sum pending disbursements: %w", err)
+	}
+	return total, nil
+}

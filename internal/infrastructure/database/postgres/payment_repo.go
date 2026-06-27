@@ -37,24 +37,25 @@ func (r *paymentRepo) Save(ctx context.Context, p *entity.Payment) error {
 		return fmt.Errorf("marshal metadata: %w", err)
 	}
 	row, err := r.queries(ctx).InsertPayment(ctx, gen.InsertPaymentParams{
-		MerchantID:    p.MerchantID,
-		ExternalID:    p.ExternalID,
-		Method:        string(p.Method),
-		Provider:      string(p.Provider),
-		Status:        string(p.Status),
-		Amount:        p.Amount,
-		FeeAmount:     p.FeeAmount,
-		Currency:      string(p.Currency),
-		Description:   p.Description,
-		CustomerName:  p.CustomerName,
-		CustomerEmail: p.CustomerEmail,
-		CustomerPhone: p.CustomerPhone,
-		VaNumber:      p.VANumber,
-		BankCode:      string(p.BankCode),
-		QrString:      p.QRString,
-		QrImageUrl:    p.QRImageURL,
-		ExpiryAt:      p.ExpiryAt,
-		Metadata:      meta,
+		MerchantID:        p.MerchantID,
+		ExternalID:        p.ExternalID,
+		ProviderPaymentID: p.ProviderPaymentID,
+		Method:            string(p.Method),
+		Provider:          string(p.Provider),
+		Status:            string(p.Status),
+		Amount:            p.Amount,
+		FeeAmount:         p.FeeAmount,
+		Currency:          string(p.Currency),
+		Description:       p.Description,
+		CustomerName:      p.CustomerName,
+		CustomerEmail:     p.CustomerEmail,
+		CustomerPhone:     p.CustomerPhone,
+		VaNumber:          p.VANumber,
+		BankCode:          string(p.BankCode),
+		QrString:          p.QRString,
+		QrImageUrl:        p.QRImageURL,
+		ExpiryAt:          p.ExpiryAt,
+		Metadata:          meta,
 	})
 	if err != nil {
 		return fmt.Errorf("insert payment: %w", err)
@@ -151,7 +152,7 @@ func (r *paymentRepo) List(ctx context.Context, f repository.ListPaymentFilter) 
 	page, limit := normalizePage(f.Page, f.Limit)
 	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic,gosec // limit capped at maxLimit=100, never overflows int32
 	query := fmt.Sprintf(
-		"SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		"SELECT id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
 		where, idx, idx+1,
 	)
 
@@ -165,7 +166,7 @@ func (r *paymentRepo) List(ctx context.Context, f repository.ListPaymentFilter) 
 	for rows.Next() {
 		var p gen.Payment
 		if err := rows.Scan(
-			&p.ID, &p.MerchantID, &p.ExternalID, &p.Method, &p.Provider, &p.Status,
+			&p.ID, &p.MerchantID, &p.ExternalID, &p.ProviderPaymentID, &p.Method, &p.Provider, &p.Status,
 			&p.Amount, &p.FeeAmount, &p.Currency, &p.Description,
 			&p.CustomerName, &p.CustomerEmail, &p.CustomerPhone,
 			&p.VaNumber, &p.BankCode, &p.QrString, &p.QrImageUrl,

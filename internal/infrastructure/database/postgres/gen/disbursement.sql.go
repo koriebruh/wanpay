@@ -221,6 +221,22 @@ func (q *Queries) SumDisbursementsToday(ctx context.Context, merchantID string) 
 	return total, err
 }
 
+const sumPendingDisbursements = `-- name: SumPendingDisbursements :one
+SELECT COALESCE(SUM(amount), 0)::BIGINT AS total
+FROM disbursements
+WHERE merchant_id = $1
+  AND status IN ('pending', 'processing')
+`
+
+// Returns total amount of pending/processing disbursements for a merchant.
+// Used in balance checks to prevent double-spend before the provider confirms.
+func (q *Queries) SumPendingDisbursements(ctx context.Context, merchantID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, sumPendingDisbursements, merchantID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const updateDisbursementStatus = `-- name: UpdateDisbursementStatus :one
 UPDATE disbursements
 SET status         = $2,

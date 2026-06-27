@@ -46,3 +46,11 @@ FROM disbursements
 WHERE merchant_id = $1
   AND status NOT IN ('failed', 'cancelled')
   AND created_at >= (NOW() AT TIME ZONE 'Asia/Jakarta')::DATE::TIMESTAMPTZ;
+
+-- name: SumPendingDisbursements :one
+-- Returns total amount of pending/processing disbursements for a merchant.
+-- Used in balance checks to prevent double-spend before the provider confirms.
+SELECT COALESCE(SUM(amount), 0)::BIGINT AS total
+FROM disbursements
+WHERE merchant_id = $1
+  AND status IN ('pending', 'processing');

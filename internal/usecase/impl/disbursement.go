@@ -69,25 +69,32 @@ func (u *disbursementUsecase) Disburse(ctx context.Context, input usecase.Disbur
 		return nil, err
 	}
 
-	// Balance + daily-limit checks run inside a transaction with a merchant row lock
-	// (SELECT ... FOR UPDATE) to prevent concurrent double-spend.
-	var balance int64
-	var todayTotal int64
+	fee := computeMethodFee(merchant.FeeConfig.Disbursement, input.Amount)
+
+	// Reservation pattern: lock merchant, check balance (subtracting pending disbursements),
+	// and INSERT a pending disbursement record — all inside one transaction.
+	// This atomically "reserves" the funds so concurrent requests see the reservation
+	// and cannot both pass the balance check with the same balance.
+	var d *entity.Disbursement
 	if err := database.RunInTx(ctx, u.db, nil, func(ctx context.Context) error {
-		// Acquire exclusive lock on merchant row for the duration of this check
 		if err := database.QuerierFromContext(ctx, u.db).QueryRowContext(ctx, lockMerchantSQL, input.MerchantID).Scan(new(string)); err != nil {
 			return fmt.Errorf("lock merchant: %w", err)
 		}
-		var err error
-		balance, err = u.mutationRepo.GetBalance(ctx, input.MerchantID)
+		balance, err := u.mutationRepo.GetBalance(ctx, input.MerchantID)
 		if err != nil {
 			return fmt.Errorf("get balance: %w", err)
 		}
-		if balance < input.Amount {
-			return apperror.UnprocessableEntity("insufficient balance: have %d IDR, need %d IDR", balance, input.Amount)
+		pendingTotal, err := u.disbursementRepo.SumPendingDisbursements(ctx, input.MerchantID)
+		if err != nil {
+			return fmt.Errorf("sum pending disbursements: %w", err)
+		}
+		available := balance - pendingTotal
+		if available < input.Amount {
+			return apperror.UnprocessableEntity("insufficient balance: available %d IDR (balance %d − pending %d), need %d IDR",
+				available, balance, pendingTotal, input.Amount)
 		}
 		if merchant.DailyCashoutLimit > 0 {
-			todayTotal, err = u.disbursementRepo.SumDisbursementsToday(ctx, input.MerchantID)
+			todayTotal, err := u.disbursementRepo.SumDisbursementsToday(ctx, input.MerchantID)
 			if err != nil {
 				return fmt.Errorf("check daily limit: %w", err)
 			}
@@ -98,11 +105,26 @@ func (u *disbursementUsecase) Disburse(ctx context.Context, input usecase.Disbur
 				)
 			}
 		}
-		return nil
+		// Reserve funds by inserting a pending record before calling the provider.
+		d = &entity.Disbursement{
+			MerchantID:    input.MerchantID,
+			ExternalID:    "", // set after provider call
+			Provider:      input.Provider,
+			Status:        entity.DisbursementStatusPending,
+			BankCode:      input.BankCode,
+			AccountNumber: input.AccountNumber,
+			AccountName:   input.AccountName,
+			Amount:        input.Amount,
+			FeeAmount:     fee,
+			Currency:      input.Currency,
+			Description:   input.Description,
+		}
+		return u.disbursementRepo.Save(ctx, d)
 	}); err != nil {
 		return nil, err
 	}
 
+	// Call provider outside the transaction — disbursement record already inserted as pending.
 	extID := externalID()
 	resp, err := gw.Disburse(ctx, gateway.DisburseRequest{
 		ExternalID:    extID,
@@ -114,25 +136,23 @@ func (u *disbursementUsecase) Disburse(ctx context.Context, input usecase.Disbur
 		Description:   input.Description,
 	})
 	if err != nil {
+		// Provider failed — mark reserved disbursement as failed so balance is released.
+		d.Status = entity.DisbursementStatusFailed
+		d.FailureReason = err.Error()
+		if updateErr := u.disbursementRepo.Update(ctx, d); updateErr != nil {
+			u.log.Error("failed to mark disbursement as failed after provider error",
+				zap.String("disbursement_id", d.ID),
+				zap.Error(updateErr),
+			)
+		}
 		return nil, fmt.Errorf("disburse via %s: %w", input.Provider, err)
 	}
 
-	fee := computeMethodFee(merchant.FeeConfig.Disbursement, input.Amount)
-	d := &entity.Disbursement{
-		MerchantID:    input.MerchantID,
-		ExternalID:    resp.ExternalID,
-		Provider:      input.Provider,
-		Status:        resp.Status,
-		BankCode:      input.BankCode,
-		AccountNumber: input.AccountNumber,
-		AccountName:   input.AccountName,
-		Amount:        input.Amount,
-		FeeAmount:     fee,
-		Currency:      input.Currency,
-		Description:   input.Description,
-	}
-	if err := u.disbursementRepo.Save(ctx, d); err != nil {
-		return nil, fmt.Errorf("save disbursement: %w", err)
+	// Update the reserved record with the provider's response.
+	d.ExternalID = resp.ExternalID
+	d.Status = resp.Status
+	if err := u.disbursementRepo.Update(ctx, d); err != nil {
+		return nil, fmt.Errorf("update disbursement after provider: %w", err)
 	}
 
 	u.log.Info("disbursement created",

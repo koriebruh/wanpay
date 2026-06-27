@@ -88,23 +88,24 @@ func (u *paymentUsecase) CreateVA(ctx context.Context, input usecase.CreateVAInp
 	}
 
 	p := &entity.Payment{
-		MerchantID:    input.MerchantID,
-		ExternalID:    resp.ExternalID,
-		Method:        entity.PaymentMethodVA,
-		Provider:      input.Provider,
-		Status:        entity.PaymentStatusPending,
-		Amount:        input.Amount,
-		Currency:      input.Currency,
-		Description:   input.Description,
-		CustomerName:  input.CustomerName,
-		CustomerEmail: input.CustomerEmail,
-		CustomerPhone: input.CustomerPhone,
-		VANumber:      resp.VANumber,
-		BankCode:      input.BankCode,
-		ExpiryAt:      resp.ExpiryAt,
+		MerchantID:        input.MerchantID,
+		ExternalID:        resp.ExternalID,
+		ProviderPaymentID: resp.ProviderPaymentID,
+		Method:            entity.PaymentMethodVA,
+		Provider:          input.Provider,
+		Status:            entity.PaymentStatusPending,
+		Amount:            input.Amount,
+		Currency:          input.Currency,
+		Description:       input.Description,
+		CustomerName:      input.CustomerName,
+		CustomerEmail:     input.CustomerEmail,
+		CustomerPhone:     input.CustomerPhone,
+		VANumber:          resp.VANumber,
+		BankCode:          input.BankCode,
+		ExpiryAt:          resp.ExpiryAt,
 	}
-	if err := u.paymentRepo.Save(ctx, p); err != nil {
-		return nil, fmt.Errorf("save payment: %w", err)
+	if err := u.savePaymentWithAudit(ctx, p, input.MerchantID); err != nil {
+		return nil, err
 	}
 
 	u.log.Info("VA payment created",
@@ -145,25 +146,42 @@ func (u *paymentUsecase) CreateQRIS(ctx context.Context, input usecase.CreateQRI
 	}
 
 	p := &entity.Payment{
-		MerchantID:    input.MerchantID,
-		ExternalID:    resp.ExternalID,
-		Method:        entity.PaymentMethodQRIS,
-		Provider:      input.Provider,
-		Status:        entity.PaymentStatusPending,
-		Amount:        input.Amount,
-		Currency:      input.Currency,
-		Description:   input.Description,
-		CustomerName:  input.CustomerName,
-		CustomerEmail: input.CustomerEmail,
-		CustomerPhone: input.CustomerPhone,
-		QRString:      resp.QRString,
-		QRImageURL:    resp.QRImageURL,
-		ExpiryAt:      resp.ExpiryAt,
+		MerchantID:        input.MerchantID,
+		ExternalID:        resp.ExternalID,
+		ProviderPaymentID: resp.ProviderPaymentID,
+		Method:            entity.PaymentMethodQRIS,
+		Provider:          input.Provider,
+		Status:            entity.PaymentStatusPending,
+		Amount:            input.Amount,
+		Currency:          input.Currency,
+		Description:       input.Description,
+		CustomerName:      input.CustomerName,
+		CustomerEmail:     input.CustomerEmail,
+		CustomerPhone:     input.CustomerPhone,
+		QRString:          resp.QRString,
+		QRImageURL:        resp.QRImageURL,
+		ExpiryAt:          resp.ExpiryAt,
 	}
-	if err := u.paymentRepo.Save(ctx, p); err != nil {
-		return nil, fmt.Errorf("save payment: %w", err)
+	if err := u.savePaymentWithAudit(ctx, p, input.MerchantID); err != nil {
+		return nil, err
 	}
 	return toPaymentOutput(p), nil
+}
+
+// savePaymentWithAudit persists a new pending payment and its PAYMENT_CREATED
+// audit record in one transaction, so the audit trail can never go missing.
+func (u *paymentUsecase) savePaymentWithAudit(ctx context.Context, p *entity.Payment, merchantID string) error {
+	return database.RunInTx(ctx, u.db, nil, func(ctx context.Context) error {
+		if err := u.paymentRepo.Save(ctx, p); err != nil {
+			return fmt.Errorf("save payment: %w", err)
+		}
+		return u.auditRepo.Save(ctx, &entity.PaymentAudit{
+			PaymentID: p.ID,
+			EventType: entity.AuditEventPaymentCreated,
+			NewStatus: entity.PaymentStatusPending,
+			Actor:     "merchant:" + merchantID,
+		})
+	})
 }
 
 func (u *paymentUsecase) GetPayment(ctx context.Context, merchantID, paymentID string) (*usecase.PaymentOutput, error) {
@@ -193,7 +211,13 @@ func (u *paymentUsecase) CancelPayment(ctx context.Context, merchantID, paymentI
 	if err != nil {
 		return err
 	}
-	if err := gw.CancelPayment(ctx, p.ExternalID); err != nil {
+	// Xendit cancel needs the ProviderPaymentID (payment_request_id), not ExternalID.
+	// For other providers (Midtrans, DOKU, iPaymu), ExternalID is the correct cancel key.
+	cancelID := p.ExternalID
+	if p.ProviderPaymentID != "" {
+		cancelID = p.ProviderPaymentID
+	}
+	if err := gw.CancelPayment(ctx, cancelID); err != nil {
 		return fmt.Errorf("cancel via provider: %w", err)
 	}
 

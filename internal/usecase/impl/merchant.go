@@ -90,7 +90,6 @@ func (u *merchantUsecase) Update(ctx context.Context, input usecase.UpdateMercha
 	if input.WebhookURL != "" {
 		m.WebhookURL = input.WebhookURL
 	}
-	m.FeeConfig = input.FeeConfig
 	if err := u.merchantRepo.Update(ctx, m); err != nil {
 		return nil, fmt.Errorf("update merchant: %w", err)
 	}

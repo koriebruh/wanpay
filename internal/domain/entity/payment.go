@@ -53,17 +53,21 @@ const (
 type Payment struct {
 	ID            string
 	MerchantID    string
-	ExternalID    string // provider's reference ID, used for webhook correlation
-	Method        PaymentMethod
-	Provider      Provider
-	Status        PaymentStatus
-	Amount        int64 // gross amount paid by customer, smallest unit (IDR = 1 IDR)
-	FeeAmount     int64 // fee charged to merchant; populated on webhook receipt (0 while pending)
-	Currency      Currency
-	Description   string
-	CustomerName  string
-	CustomerEmail string
-	CustomerPhone string
+	ExternalID    string // our reference ID sent to the provider
+	// ProviderPaymentID is the provider's own internal payment ID.
+	// Xendit: payment_request_id (needed for cancel/status). iPaymu: session_id.
+	// Distinct from ExternalID (which we generate). Empty for Midtrans (uses ExternalID).
+	ProviderPaymentID string
+	Method            PaymentMethod
+	Provider          Provider
+	Status            PaymentStatus
+	Amount            int64 // gross amount paid by customer, smallest unit (IDR = 1 IDR)
+	FeeAmount         int64 // fee charged to merchant; populated on webhook receipt (0 while pending)
+	Currency          Currency
+	Description       string
+	CustomerName      string
+	CustomerEmail     string
+	CustomerPhone     string
 
 	// VA-specific fields — empty for QRIS
 	VANumber string

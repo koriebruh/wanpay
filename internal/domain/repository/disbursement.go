@@ -29,4 +29,7 @@ type DisbursementRepository interface {
 	// SumDisbursementsToday returns the total amount disbursed today (WIB).
 	// Used to enforce merchant.DailyCashoutLimit.
 	SumDisbursementsToday(ctx context.Context, merchantID string) (int64, error)
+	// SumPendingDisbursements returns the total amount of pending/processing disbursements.
+	// Used inside the balance-check transaction to prevent concurrent double-spend.
+	SumPendingDisbursements(ctx context.Context, merchantID string) (int64, error)
 }

@@ -3,6 +3,7 @@ package handler
 import (
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 
@@ -37,6 +38,10 @@ func (h *WebhookHandler) HandlePaymentWebhook(c echo.Context) error {
 	}
 
 	headers := extractHeaders(c.Request())
+	// Forward ?wt= query param as a pseudo-header so iPaymu adapter can verify it.
+	if wt := c.QueryParam("wt"); wt != "" {
+		headers["x-wt"] = wt
+	}
 	if err := h.paymentUC.HandleWebhook(c.Request().Context(), provider, headers, body); err != nil {
 		return err
 	}
@@ -62,14 +67,13 @@ func (h *WebhookHandler) HandleDisbursementWebhook(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-// extractHeaders flattens the first value of each header into a plain map.
-// Provider signature verification looks up specific header names (case-insensitive
-// normalisation happens inside each adapter).
+// extractHeaders flattens request headers into a lowercase-keyed map so provider
+// adapters can do simple map lookups without worrying about canonical casing.
 func extractHeaders(r *http.Request) map[string]string {
 	out := make(map[string]string, len(r.Header))
 	for k, v := range r.Header {
 		if len(v) > 0 {
-			out[k] = v[0]
+			out[strings.ToLower(k)] = v[0]
 		}
 	}
 	return out

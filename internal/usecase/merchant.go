@@ -16,12 +16,11 @@ type CreateMerchantInput struct {
 }
 
 type UpdateMerchantInput struct {
-	MerchantID string           `json:"-"`
-	Name       string           `json:"name"        validate:"max=100"`
-	Email      string           `json:"email"       validate:"omitempty,email,max=255"`
-	Phone      string           `json:"phone"       validate:"max=20"`
-	WebhookURL string           `json:"webhook_url" validate:"omitempty,url,max=500"`
-	FeeConfig  entity.FeeConfig `json:"fee_config"`
+	MerchantID string `json:"-"`
+	Name       string `json:"name"        validate:"max=100"`
+	Email      string `json:"email"       validate:"omitempty,email,max=255"`
+	Phone      string `json:"phone"       validate:"max=20"`
+	WebhookURL string `json:"webhook_url" validate:"omitempty,url,max=500"`
 }
 
 type AddBankAccountInput struct {
