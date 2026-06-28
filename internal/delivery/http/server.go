@@ -116,6 +116,12 @@ func requestLogger(log *zap.Logger) echo.MiddlewareFunc {
 				zap.Duration("latency", latency),
 				zap.String("ip", c.RealIP()),
 			}
+			if merchantID, ok := c.Get("merchant_id").(string); ok && merchantID != "" {
+				fields = append(fields, zap.String("merchant_id", merchantID))
+			}
+			if adminID, ok := c.Get("admin_id").(string); ok && adminID != "" {
+				fields = append(fields, zap.String("admin_id", adminID))
+			}
 
 			if status >= 500 {
 				log.Error("request", fields...)
