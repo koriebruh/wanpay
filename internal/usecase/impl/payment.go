@@ -11,7 +11,6 @@ import (
 	"wanpey/core/internal/domain/gateway"
 	"wanpey/core/internal/domain/repository"
 	"wanpey/core/internal/infrastructure/database"
-	"wanpey/core/internal/infrastructure/database/postgres"
 	"wanpey/core/internal/usecase"
 	"wanpey/core/pkg/apperror"
 	"wanpey/core/pkg/webhook"
@@ -22,7 +21,7 @@ type paymentUsecase struct {
 	paymentRepo  repository.PaymentRepository
 	mutationRepo repository.MutationRepository
 	auditRepo    repository.AuditRepository
-	outboxRepo   *postgres.OutboxRepo
+	outboxRepo   outboxPort
 	merchantRepo repository.MerchantRepository
 	feeResolver  *FeeResolver
 	db           database.SQLDB
@@ -34,7 +33,7 @@ func NewPaymentUsecase(
 	paymentRepo repository.PaymentRepository,
 	mutationRepo repository.MutationRepository,
 	auditRepo repository.AuditRepository,
-	outboxRepo *postgres.OutboxRepo,
+	outboxRepo outboxPort,
 	merchantRepo repository.MerchantRepository,
 	feeResolver *FeeResolver,
 	db database.SQLDB,

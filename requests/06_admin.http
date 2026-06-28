@@ -1,0 +1,407 @@
+# ─────────────────────────────────────────────────────────────
+# Admin — Auth, Merchant & System Management
+#
+# Seed admin pertama:
+#   go run ./cmd/api seed-admin --email admin@example.com \
+#     --password secret --role super_admin
+#
+# Flow umum:
+#   1. POST /admin/login              → simpan access_token & refresh_token
+#   2. Semua request admin: Authorization: Bearer {{accessToken}}
+#   3. Token expired? → POST /admin/token/refresh
+#
+# Permission matrix singkat:
+#   super_admin → semua akses
+#   ops         → buat/approve/suspend merchant, verifikasi rekening, lihat payment/disbursement
+#   finance     → set fee, cashout limit, provider balance, fee defaults/holiday
+# ─────────────────────────────────────────────────────────────
+
+@baseUrl      = http://localhost:8080
+@accessToken  = GANTI_DENGAN_ACCESS_TOKEN_DARI_LOGIN
+@refreshToken = GANTI_DENGAN_REFRESH_TOKEN_DARI_LOGIN
+@merchantId   = GANTI_DENGAN_MERCHANT_ID
+@bankAccountId = GANTI_DENGAN_BANK_ACCOUNT_ID
+@adminId      = GANTI_DENGAN_ADMIN_ID
+
+
+# ══════════════════════════════════════════════════════════════
+# AUTH
+# ══════════════════════════════════════════════════════════════
+
+### Login admin → simpan access_token & refresh_token
+POST {{baseUrl}}/admin/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "secret"
+}
+
+
+### Refresh access token (pakai refresh_token, bukan access_token)
+POST {{baseUrl}}/admin/token/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
+
+
+### Get profile diri sendiri
+GET {{baseUrl}}/admin/me
+Authorization: Bearer {{accessToken}}
+
+
+### Ganti password
+PATCH {{baseUrl}}/admin/me/password
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "old_password": "secret",
+  "new_password": "NewPassword123!"
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# MERCHANT MANAGEMENT
+# ══════════════════════════════════════════════════════════════
+
+### Buat merchant baru (roles: super_admin, ops)
+# Response: api_key & webhook_secret — simpan, tidak bisa didapat lagi!
+POST {{baseUrl}}/admin/merchants
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Toko Makmur Jaya",
+  "email": "merchant@tokomakmur.com",
+  "phone": "081234567890",
+  "webhook_url": "https://webhook.site/your-unique-id",
+  "is_production": false,
+  "fee_config": {
+    "va": {
+      "type": "flat",
+      "amount": 4000
+    },
+    "qris": {
+      "type": "percentage",
+      "percentage": 0.7
+    },
+    "disbursement": {
+      "type": "flat",
+      "amount": 6500
+    }
+  }
+}
+
+
+### List semua merchant (semua role admin)
+GET {{baseUrl}}/admin/merchants?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+
+### Filter merchant berdasarkan status
+GET {{baseUrl}}/admin/merchants?status=pending&page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+
+### Get detail satu merchant
+GET {{baseUrl}}/admin/merchants/{{merchantId}}
+Authorization: Bearer {{accessToken}}
+
+
+### Approve merchant (roles: super_admin, ops)
+PATCH {{baseUrl}}/admin/merchants/{{merchantId}}/approve
+Authorization: Bearer {{accessToken}}
+
+
+### Suspend merchant (roles: super_admin, ops)
+PATCH {{baseUrl}}/admin/merchants/{{merchantId}}/suspend
+Authorization: Bearer {{accessToken}}
+
+
+### Deactivate merchant (roles: super_admin, ops)
+PATCH {{baseUrl}}/admin/merchants/{{merchantId}}/deactivate
+Authorization: Bearer {{accessToken}}
+
+
+### Set fee merchant (roles: super_admin, finance) — reason wajib min 10 char
+PATCH {{baseUrl}}/admin/merchants/{{merchantId}}/fee
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "fee_config": {
+    "va": {
+      "type": "flat",
+      "amount": 3500
+    },
+    "qris": {
+      "type": "percentage",
+      "percentage": 0.5
+    },
+    "disbursement": {
+      "type": "flat",
+      "amount": 5000
+    }
+  },
+  "reason": "Kontrak baru merchant, fee khusus Q3 2026"
+}
+
+
+### Update cashout limit (roles: super_admin, finance)
+# daily_cashout_limit dalam IDR, 0 = tidak ada limit
+PATCH {{baseUrl}}/admin/merchants/{{merchantId}}/cashout-limit
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "daily_cashout_limit": 50000000
+}
+
+
+### Regenerate API key merchant (roles: super_admin, ops)
+POST {{baseUrl}}/admin/merchants/{{merchantId}}/api-key/regenerate
+Authorization: Bearer {{accessToken}}
+
+
+### Hapus merchant (roles: super_admin)
+DELETE {{baseUrl}}/admin/merchants/{{merchantId}}
+Authorization: Bearer {{accessToken}}
+
+
+### List rekening bank merchant
+GET {{baseUrl}}/admin/merchants/{{merchantId}}/bank-accounts
+Authorization: Bearer {{accessToken}}
+
+
+### Verifikasi rekening bank merchant (roles: super_admin, ops)
+# Setelah diverifikasi, rekening bisa dipakai untuk disbursement
+PATCH {{baseUrl}}/admin/merchants/{{merchantId}}/bank-accounts/{{bankAccountId}}/verify
+Authorization: Bearer {{accessToken}}
+
+
+# ══════════════════════════════════════════════════════════════
+# PAYMENT & DISBURSEMENT (Admin View)
+# ══════════════════════════════════════════════════════════════
+
+### List semua payment (lintas merchant)
+GET {{baseUrl}}/admin/payments?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+
+### Filter payment berdasarkan merchant
+GET {{baseUrl}}/admin/payments?merchant_id={{merchantId}}&page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+
+### Filter payment berdasarkan status
+GET {{baseUrl}}/admin/payments?status=paid&page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+
+### Get detail payment
+GET {{baseUrl}}/admin/payments/GANTI_DENGAN_PAYMENT_ID
+Authorization: Bearer {{accessToken}}
+
+
+### List semua disbursement (lintas merchant)
+GET {{baseUrl}}/admin/disbursements?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+
+### Get detail disbursement
+GET {{baseUrl}}/admin/disbursements/GANTI_DENGAN_DISBURSEMENT_ID
+Authorization: Bearer {{accessToken}}
+
+
+# ══════════════════════════════════════════════════════════════
+# MUTATIONS (Admin) — roles: super_admin, finance
+# ══════════════════════════════════════════════════════════════
+
+### List semua mutasi (lintas merchant)
+GET {{baseUrl}}/admin/mutations?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+
+# ══════════════════════════════════════════════════════════════
+# PROVIDER BALANCES — roles: super_admin, finance
+# ══════════════════════════════════════════════════════════════
+
+### Get semua saldo provider
+GET {{baseUrl}}/admin/provider-balances
+Authorization: Bearer {{accessToken}}
+
+
+### Update saldo provider (setelah rekonsiliasi manual)
+PATCH {{baseUrl}}/admin/provider-balances/midtrans
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "balance": 50000000,
+  "notes": "Rekonsiliasi manual 28 Juni 2026"
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# ADMIN MANAGEMENT — roles: super_admin only
+# ══════════════════════════════════════════════════════════════
+
+### Buat admin baru
+POST {{baseUrl}}/admin/admins
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "email": "ops-team@wanpey.com",
+  "password": "SecurePass123!",
+  "role": "ops"
+}
+
+
+### Buat admin finance
+POST {{baseUrl}}/admin/admins
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "email": "finance-team@wanpey.com",
+  "password": "SecurePass456!",
+  "role": "finance"
+}
+
+
+### List semua admin
+GET {{baseUrl}}/admin/admins
+Authorization: Bearer {{accessToken}}
+
+
+### Deactivate admin (tidak bisa deactivate diri sendiri)
+PATCH {{baseUrl}}/admin/admins/{{adminId}}/deactivate
+Authorization: Bearer {{accessToken}}
+
+
+# ══════════════════════════════════════════════════════════════
+# FEE MANAGEMENT — roles: super_admin, finance
+# ══════════════════════════════════════════════════════════════
+
+### Get fee default (global fallback)
+GET {{baseUrl}}/admin/fees/default
+Authorization: Bearer {{accessToken}}
+
+
+### Update fee default (reason wajib min 10 char)
+PUT {{baseUrl}}/admin/fees/default
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "va": {
+    "type": "flat",
+    "amount": 4500
+  },
+  "qris": {
+    "type": "percentage",
+    "percentage": 0.8
+  },
+  "disbursement": {
+    "type": "flat",
+    "amount": 7000
+  },
+  "reason": "Penyesuaian tarif provider Q3 2026"
+}
+
+
+### Get platform margin
+GET {{baseUrl}}/admin/fees/margin
+Authorization: Bearer {{accessToken}}
+
+
+### Update platform margin (roles: super_admin only)
+PUT {{baseUrl}}/admin/fees/margin
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "va_enabled": true,
+  "va_amount": 500,
+  "qris_enabled": true,
+  "qris_percentage": 0.1,
+  "disbursement_enabled": false,
+  "disbursement_amount": 0,
+  "reason": "Margin baru berlaku Q3 2026"
+}
+
+
+### List fee holiday
+GET {{baseUrl}}/admin/fees/holidays
+Authorization: Bearer {{accessToken}}
+
+
+### Tambah fee holiday (roles: super_admin, finance)
+POST {{baseUrl}}/admin/fees/holidays
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "date": "2026-08-17",
+  "name": "Hari Kemerdekaan RI",
+  "va_surcharge": 1000,
+  "qris_surcharge": 500,
+  "disbursement_surcharge": 2000,
+  "is_active": true
+}
+
+
+### Update fee holiday
+PUT {{baseUrl}}/admin/fees/holidays/GANTI_DENGAN_HOLIDAY_ID
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Hari Kemerdekaan RI ke-81",
+  "va_surcharge": 1500,
+  "qris_surcharge": 500,
+  "disbursement_surcharge": 2000,
+  "is_active": true
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# ERROR CASES
+# ══════════════════════════════════════════════════════════════
+
+### Login salah password → 401
+POST {{baseUrl}}/admin/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "wrong-password"
+}
+
+
+### Akses tanpa token → 401
+GET {{baseUrl}}/admin/me
+
+
+### Token tidak valid → 401
+GET {{baseUrl}}/admin/me
+Authorization: Bearer tokeninvalid.xxx.yyy
+
+
+### Pakai access token sebagai refresh token → 401
+POST {{baseUrl}}/admin/token/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{accessToken}}"
+}
+
+
+### Finance mencoba approve merchant → 403 Forbidden
+# (finance tidak punya permission approve)
+PATCH {{baseUrl}}/admin/merchants/{{merchantId}}/approve
+Authorization: Bearer GANTI_DENGAN_FINANCE_ACCESS_TOKEN

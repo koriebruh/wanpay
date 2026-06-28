@@ -2,17 +2,24 @@
 # Disbursement — Cash Out ke Rekening Bank
 #
 # Prasyarat:
-#   - Merchant harus punya saldo (lihat 04_mutation.http untuk cek balance)
-#   - Merchant harus active dan CanTransact() = true
-#   - Provider harus support disbursement: xendit atau doku
+#   - Merchant harus punya saldo (lihat 04_mutation.http)
+#   - Merchant status active
+#   - Rekening bank sudah ditambah via POST /v1/merchants/me/bank-accounts
+#   - Admin sudah verifikasi rekening via PATCH /admin/merchants/:id/bank-accounts/:aid/verify
+#   - Provider yang support: xendit, doku (bukan midtrans/ipaymu)
+#
+# PENTING: Disbursement pakai bank_account_id (UUID) dari rekening yang sudah
+# terdaftar dan terverifikasi, BUKAN input bank_code + account_number langsung.
 # ─────────────────────────────────────────────────────────────
 
 @baseUrl        = http://localhost:8080
 @apiKey         = wpay_test_GANTI_DENGAN_API_KEY_DARI_RESPONSE
 @disbursementId = GANTI_DENGAN_DISBURSEMENT_ID
+# Isi dengan id rekening bank dari GET /v1/merchants/me/bank-accounts
+@bankAccountId  = GANTI_DENGAN_BANK_ACCOUNT_ID
 
 
-### 1. Disbursement via Xendit ke BCA
+### 1. Disbursement via Xendit
 POST {{baseUrl}}/v1/disbursements
 Content-Type: application/json
 X-API-Key: {{apiKey}}
@@ -20,16 +27,14 @@ X-Idempotency-Key: disb-xendit-001
 
 {
   "provider": "xendit",
-  "bank_code": "BCA",
-  "account_number": "1234567890",
-  "account_name": "Budi Santoso",
+  "bank_account_id": "{{bankAccountId}}",
   "amount": 500000,
   "currency": "IDR",
   "description": "Pencairan saldo mingguan"
 }
 
 
-### 2. Disbursement via DOKU ke Mandiri
+### 2. Disbursement via DOKU
 POST {{baseUrl}}/v1/disbursements
 Content-Type: application/json
 X-API-Key: {{apiKey}}
@@ -37,51 +42,76 @@ X-Idempotency-Key: disb-doku-001
 
 {
   "provider": "doku",
-  "bank_code": "MANDIRI",
-  "account_number": "1370012345678",
-  "account_name": "Siti Rahayu",
+  "bank_account_id": "{{bankAccountId}}",
   "amount": 250000,
   "currency": "IDR",
   "description": "Refund order #98765"
 }
 
 
-### 3. Get detail disbursement
+### 3. List semua disbursement (paginated)
+GET {{baseUrl}}/v1/disbursements?page=1&limit=10
+X-API-Key: {{apiKey}}
+
+
+### 4. Get detail disbursement
 GET {{baseUrl}}/v1/disbursements/{{disbursementId}}
 X-API-Key: {{apiKey}}
 
 
 ### ERROR CASES ─────────────────────────────────────────────
 
-### Provider tidak support disbursement (midtrans/ipaymu) → 400 Bad Request
+### Provider tidak support disbursement → 400 Bad Request
 POST {{baseUrl}}/v1/disbursements
 Content-Type: application/json
 X-API-Key: {{apiKey}}
-X-Idempotency-Key: disb-error-001
 
 {
   "provider": "midtrans",
-  "bank_code": "BCA",
-  "account_number": "1234567890",
-  "account_name": "Test",
+  "bank_account_id": "{{bankAccountId}}",
   "amount": 100000,
   "currency": "IDR",
   "description": "Test — should fail"
 }
 
 
-### Saldo tidak cukup → 422 Unprocessable Entity
+### Rekening belum diverifikasi admin → 422 Unprocessable Entity
 POST {{baseUrl}}/v1/disbursements
 Content-Type: application/json
 X-API-Key: {{apiKey}}
-X-Idempotency-Key: disb-error-002
 
 {
   "provider": "xendit",
-  "bank_code": "BCA",
-  "account_number": "1234567890",
-  "account_name": "Test",
+  "bank_account_id": "00000000-0000-0000-0000-000000000000",
+  "amount": 100000,
+  "currency": "IDR",
+  "description": "Test — rekening tidak valid"
+}
+
+
+### Saldo tidak cukup → 402 Payment Required
+POST {{baseUrl}}/v1/disbursements
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "provider": "xendit",
+  "bank_account_id": "{{bankAccountId}}",
   "amount": 999999999999,
   "currency": "IDR",
   "description": "Test — saldo tidak cukup"
+}
+
+
+### bank_account_id tidak valid UUID → 400 Bad Request
+POST {{baseUrl}}/v1/disbursements
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "provider": "xendit",
+  "bank_account_id": "bukan-uuid",
+  "amount": 100000,
+  "currency": "IDR",
+  "description": "Test — bank_account_id bukan UUID"
 }

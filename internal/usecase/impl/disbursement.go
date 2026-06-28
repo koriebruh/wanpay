@@ -11,7 +11,6 @@ import (
 	"wanpey/core/internal/domain/gateway"
 	"wanpey/core/internal/domain/repository"
 	"wanpey/core/internal/infrastructure/database"
-	"wanpey/core/internal/infrastructure/database/postgres"
 	"wanpey/core/internal/usecase"
 	"wanpey/core/pkg/apperror"
 	"wanpey/core/pkg/webhook"
@@ -23,7 +22,7 @@ type disbursementUsecase struct {
 	gateways         map[entity.Provider]gateway.DisbursementGateway
 	disbursementRepo repository.DisbursementRepository
 	mutationRepo     repository.MutationRepository
-	outboxRepo       *postgres.OutboxRepo
+	outboxRepo       outboxPort
 	merchantRepo     repository.MerchantRepository
 	feeResolver      *FeeResolver
 	db               database.SQLDB
@@ -34,7 +33,7 @@ func NewDisbursementUsecase(
 	gateways map[entity.Provider]gateway.DisbursementGateway,
 	disbursementRepo repository.DisbursementRepository,
 	mutationRepo repository.MutationRepository,
-	outboxRepo *postgres.OutboxRepo,
+	outboxRepo outboxPort,
 	merchantRepo repository.MerchantRepository,
 	feeResolver *FeeResolver,
 	db database.SQLDB,

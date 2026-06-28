@@ -8,7 +8,6 @@ import (
 	"wanpey/core/internal/domain/entity"
 	"wanpey/core/internal/domain/repository"
 	"wanpey/core/internal/infrastructure/database"
-	"wanpey/core/internal/infrastructure/database/postgres"
 	"wanpey/core/internal/usecase"
 	"wanpey/core/pkg/apperror"
 )
@@ -16,14 +15,14 @@ import (
 type merchantUsecase struct {
 	merchantRepo repository.MerchantRepository
 	mutationRepo repository.MutationRepository
-	outboxRepo   *postgres.OutboxRepo
+	outboxRepo   outboxPort
 	db           database.SQLDB
 }
 
 func NewMerchantUsecase(
 	merchantRepo repository.MerchantRepository,
 	mutationRepo repository.MutationRepository,
-	outboxRepo *postgres.OutboxRepo,
+	outboxRepo outboxPort,
 	db database.SQLDB,
 ) usecase.MerchantUsecase {
 	return &merchantUsecase{

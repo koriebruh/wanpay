@@ -1,7 +1,7 @@
 .PHONY: run dev build daemon-start daemon-stop daemon-status \
         migrate-up migrate-down migrate-status \
         sqlc \
-        test test-unit test-integration \
+        test test-unit test-integration test-e2e \
         lint tidy vet infra-up infra-down infra-logs docker-build \
         install-hooks install-tools
 
@@ -84,6 +84,10 @@ test-unit:
 ## test-integration: run integration tests (requires .config.toml with real credentials)
 test-integration:
 	CONFIG_PATH=$(PWD)/.config.toml go test -race -count=1 -tags integration -v ./...
+
+## test-e2e: run end-to-end tests (requires infra-up + .config.toml)
+test-e2e:
+	CONFIG_PATH=$(PWD)/.config.toml go test -race -count=1 -tags e2e -v ./tests/e2e/...
 
 ## vet: run static analysis
 vet:

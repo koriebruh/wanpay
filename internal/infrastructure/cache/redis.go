@@ -53,6 +53,25 @@ func (r *redisCache) Exists(ctx context.Context, key string) (bool, error) {
 	return n > 0, err
 }
 
+// NewRedisCache creates a Redis-backed Cache directly (without DI). Useful in tests and CLIs.
+func NewRedisCache(cfg config.RedisConfig) (Cache, error) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     cfg.Addr,
+		Password: cfg.Password,
+		DB:       cfg.DB,
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := client.Ping(ctx).Err(); err != nil {
+		_ = client.Close()
+		return nil, fmt.Errorf("ping redis: %w", err)
+	}
+	return &redisCache{client: client}, nil
+}
+
+// NewMemoryCache creates an in-memory Cache (no Redis required). Useful in tests.
+func NewMemoryCache() Cache { return newMemoryCache() }
+
 // ProvideCache registers Cache in the DI container.
 // Redis enabled  → redisCache (distributed, production-grade).
 // Redis disabled → memoryCache (in-process, TTL-aware, single-instance only).
