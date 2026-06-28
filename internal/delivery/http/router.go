@@ -1,6 +1,8 @@
 package http
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 	echoswagger "github.com/swaggo/echo-swagger"
 	"go.uber.org/zap"
@@ -31,7 +33,9 @@ type Routes struct {
 // Register mounts all API routes on the Echo instance.
 func Register(e *echo.Echo, r Routes) {
 	// Swagger UI — available at /swagger/index.html
+	// Serve static swagger assets from echo-swagger, then override index to load a single spec URL.
 	e.GET("/swagger/*", echoswagger.WrapHandler)
+	e.GET("/swagger/index.html", swaggerIndexHandler)
 	auth := httpmw.APIKeyAuth(r.MerchantRepo)
 	idempotency := httpmw.Idempotency(r.Cache)
 
@@ -170,4 +174,37 @@ func registerAdminRoutes(e *echo.Echo, r Routes) {
 		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
 	feeAdmin.PUT("/holidays/:id", r.Admin.UpdateHoliday,
 		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
+}
+
+// swaggerIndexHandler serves a clean Swagger UI that auto-loads /swagger/doc.json.
+func swaggerIndexHandler(c echo.Context) error {
+	html := `<!DOCTYPE html>
+<html>
+<head>
+  <title>Wanpey API Docs</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="./swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="./swagger-ui-bundle.js"></script>
+<script src="./swagger-ui-standalone-preset.js"></script>
+<script>
+window.onload = function() {
+  const ui = SwaggerUIBundle({
+    url: "/swagger/doc.json",
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+    plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+    layout: "StandaloneLayout",
+    persistAuthorization: true,
+  })
+  window.ui = ui
+}
+</script>
+</body>
+</html>`
+	return c.HTML(http.StatusOK, html)
 }
