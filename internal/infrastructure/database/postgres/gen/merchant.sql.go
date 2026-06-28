@@ -13,6 +13,7 @@ import (
 const countBankAccounts = `-- name: CountBankAccounts :one
 SELECT COUNT(*) FROM merchant_bank_accounts
 WHERE merchant_id = $1
+FOR UPDATE
 `
 
 func (q *Queries) CountBankAccounts(ctx context.Context, merchantID string) (int64, error) {

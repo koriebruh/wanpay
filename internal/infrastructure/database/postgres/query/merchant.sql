@@ -78,4 +78,5 @@ DELETE FROM merchant_bank_accounts WHERE id = $1;
 
 -- name: CountBankAccounts :one
 SELECT COUNT(*) FROM merchant_bank_accounts
-WHERE merchant_id = $1;
+WHERE merchant_id = $1
+FOR UPDATE;
