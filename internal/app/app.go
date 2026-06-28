@@ -162,7 +162,7 @@ func (a *App) Run() error {
 	paymentUC := impl.NewPaymentUsecase(payGWs, paymentRepo, mutationRepo, auditRepo, outboxRepo, merchantRepo, db, log)
 	disbursementUC := impl.NewDisbursementUsecase(disbGWs, disbursementRepo, mutationRepo, outboxRepo, merchantRepo, db, log)
 	mutationUC := impl.NewMutationUsecase(mutationRepo)
-	merchantUC := impl.NewMerchantUsecase(merchantRepo, mutationRepo)
+	merchantUC := impl.NewMerchantUsecase(merchantRepo, mutationRepo, db)
 	adminUC := impl.NewAdminUsecase(adminRepo, merchantRepo, merchantUC, paymentRepo, disbursementRepo, mutationRepo, providerBalanceRepo, cfg.Admin)
 
 	// Task queue (optional — requires Redis)

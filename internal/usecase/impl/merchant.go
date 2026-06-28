@@ -7,6 +7,7 @@ import (
 
 	"wanpey/core/internal/domain/entity"
 	"wanpey/core/internal/domain/repository"
+	"wanpey/core/internal/infrastructure/database"
 	"wanpey/core/internal/usecase"
 	"wanpey/core/pkg/apperror"
 )
@@ -14,15 +15,18 @@ import (
 type merchantUsecase struct {
 	merchantRepo repository.MerchantRepository
 	mutationRepo repository.MutationRepository
+	db           database.SQLDB
 }
 
 func NewMerchantUsecase(
 	merchantRepo repository.MerchantRepository,
 	mutationRepo repository.MutationRepository,
+	db database.SQLDB,
 ) usecase.MerchantUsecase {
 	return &merchantUsecase{
 		merchantRepo: merchantRepo,
 		mutationRepo: mutationRepo,
+		db:           db,
 	}
 }
 
@@ -130,27 +134,31 @@ func (u *merchantUsecase) RegenerateAPIKey(ctx context.Context, merchantID strin
 }
 
 func (u *merchantUsecase) AddBankAccount(ctx context.Context, input usecase.AddBankAccountInput) (*usecase.BankAccountOutput, error) {
-	count, err := u.merchantRepo.CountBankAccounts(ctx, input.MerchantID)
-	if err != nil {
-		return nil, err
-	}
-	if count >= entity.MaxBankAccounts {
-		return nil, apperror.UnprocessableEntity("maximum %d bank accounts allowed", entity.MaxBankAccounts)
-	}
-	if input.SetAsPrimary {
-		if err := u.merchantRepo.UnsetPrimaryBankAccounts(ctx, input.MerchantID); err != nil {
-			return nil, fmt.Errorf("unset primary: %w", err)
+	var a *entity.MerchantBankAccount
+	if err := database.RunInTx(ctx, u.db, nil, func(ctx context.Context) error {
+		// Count inside tx to serialize concurrent requests.
+		count, err := u.merchantRepo.CountBankAccounts(ctx, input.MerchantID)
+		if err != nil {
+			return err
 		}
-	}
-	a := &entity.MerchantBankAccount{
-		MerchantID:    input.MerchantID,
-		BankCode:      input.BankCode,
-		AccountNumber: input.AccountNumber,
-		AccountName:   input.AccountName,
-		IsPrimary:     input.SetAsPrimary,
-	}
-	if err := u.merchantRepo.SaveBankAccount(ctx, a); err != nil {
-		return nil, fmt.Errorf("save bank account: %w", err)
+		if count >= entity.MaxBankAccounts {
+			return apperror.UnprocessableEntity("maximum %d bank accounts allowed", entity.MaxBankAccounts)
+		}
+		if input.SetAsPrimary {
+			if err := u.merchantRepo.UnsetPrimaryBankAccounts(ctx, input.MerchantID); err != nil {
+				return fmt.Errorf("unset primary: %w", err)
+			}
+		}
+		a = &entity.MerchantBankAccount{
+			MerchantID:    input.MerchantID,
+			BankCode:      input.BankCode,
+			AccountNumber: input.AccountNumber,
+			AccountName:   input.AccountName,
+			IsPrimary:     input.SetAsPrimary,
+		}
+		return u.merchantRepo.SaveBankAccount(ctx, a)
+	}); err != nil {
+		return nil, err
 	}
 	return toBankAccountOutput(a), nil
 }
