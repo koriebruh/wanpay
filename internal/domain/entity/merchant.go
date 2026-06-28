@@ -67,6 +67,7 @@ type Merchant struct {
 	WebhookSecret     string // SHA256 hash stored for reference; not used for signing
 	WebhookSigningKey string // raw HMAC-SHA256 key for signing outbound webhook payloads
 	FeeConfig         FeeConfig
+	IsProduction      bool       // true = live keys (wpay_live_), false = sandbox (wpay_test_)
 	DailyCashoutLimit int64      // IDR; 0 = unlimited
 	DeletedAt         *time.Time // nil = active record; soft delete only, never hard-delete
 	CreatedAt         time.Time

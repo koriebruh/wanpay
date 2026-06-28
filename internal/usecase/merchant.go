@@ -8,11 +8,12 @@ import (
 )
 
 type CreateMerchantInput struct {
-	Name       string           `json:"name"        validate:"required,max=100"`
-	Email      string           `json:"email"       validate:"required,email,max=255"`
-	Phone      string           `json:"phone"       validate:"max=20"`
-	WebhookURL string           `json:"webhook_url" validate:"omitempty,url,max=500"`
-	FeeConfig  entity.FeeConfig `json:"fee_config"`
+	Name         string           `json:"name"          validate:"required,max=100"`
+	Email        string           `json:"email"         validate:"required,email,max=255"`
+	Phone        string           `json:"phone"         validate:"max=20"`
+	WebhookURL   string           `json:"webhook_url"   validate:"omitempty,url,max=500"`
+	IsProduction bool             `json:"is_production"`
+	FeeConfig    entity.FeeConfig `json:"fee_config"`
 }
 
 type UpdateMerchantInput struct {

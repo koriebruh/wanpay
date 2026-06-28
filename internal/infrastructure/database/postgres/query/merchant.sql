@@ -1,6 +1,6 @@
 -- name: InsertMerchant :one
-INSERT INTO merchants (id, name, email, phone, status, api_key, webhook_url, webhook_secret, webhook_signing_key, fee_config)
-VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO merchants (id, name, email, phone, status, api_key, webhook_url, webhook_secret, webhook_signing_key, fee_config, is_production)
+VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: GetMerchantByID :one
@@ -27,6 +27,7 @@ SET name                = $2,
     webhook_signing_key = $9,
     fee_config          = $10,
     daily_cashout_limit = $11,
+    is_production       = $12,
     updated_at          = NOW()
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;

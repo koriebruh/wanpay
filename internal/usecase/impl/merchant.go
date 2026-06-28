@@ -45,7 +45,7 @@ func (u *merchantUsecase) Create(ctx context.Context, input usecase.CreateMercha
 		return nil, findErr
 	}
 
-	rawKey, hashedKey := generateAPIKey(false)
+	rawKey, hashedKey := generateAPIKey(input.IsProduction)
 	rawSecret, hashedSecret := generateSecret()
 
 	m := &entity.Merchant{
@@ -57,6 +57,7 @@ func (u *merchantUsecase) Create(ctx context.Context, input usecase.CreateMercha
 		WebhookURL:        input.WebhookURL,
 		WebhookSecret:     hashedSecret,
 		WebhookSigningKey: rawSecret,
+		IsProduction:      input.IsProduction,
 		FeeConfig:         input.FeeConfig,
 	}
 	if err := u.merchantRepo.Save(ctx, m); err != nil {
@@ -129,7 +130,7 @@ func (u *merchantUsecase) RegenerateAPIKey(ctx context.Context, merchantID strin
 	if err != nil {
 		return "", err
 	}
-	rawKey, hashedKey := generateAPIKey(false)
+	rawKey, hashedKey := generateAPIKey(m.IsProduction)
 	m.APIKey = hashedKey
 	if err := u.merchantRepo.Update(ctx, m); err != nil {
 		return "", fmt.Errorf("update api key: %w", err)

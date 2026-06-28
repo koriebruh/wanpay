@@ -117,6 +117,7 @@ func toEntityMerchant(m gen.Merchant) *entity.Merchant {
 		WebhookURL:        m.WebhookUrl,
 		WebhookSecret:     m.WebhookSecret,
 		WebhookSigningKey: m.WebhookSigningKey,
+		IsProduction:      m.IsProduction,
 		DailyCashoutLimit: m.DailyCashoutLimit,
 		DeletedAt:         nullTime(m.DeletedAt),
 		CreatedAt:         m.CreatedAt,
