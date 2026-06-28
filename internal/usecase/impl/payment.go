@@ -263,18 +263,26 @@ func (u *paymentUsecase) HandleWebhook(ctx context.Context, provider entity.Prov
 		return nil // idempotent
 	}
 
-	oldStatus := p.Status
-	p.Status = event.Status
-	if event.Status == entity.PaymentStatusPaid {
-		p.PaidAt = event.PaidAt
-	}
-
 	merchant, err := u.merchantRepo.FindByID(ctx, p.MerchantID)
 	if err != nil {
 		return fmt.Errorf("find merchant: %w", err)
 	}
 
 	return database.RunInTx(ctx, u.db, nil, func(ctx context.Context) error {
+		// Re-fetch with SELECT FOR UPDATE inside tx so concurrent webhook deliveries
+		// are serialized. The first one wins; the second sees IsFinal() = true and exits.
+		fresh, err := u.paymentRepo.FindByIDForUpdate(ctx, p.ID)
+		if err != nil {
+			return err
+		}
+		if fresh.IsFinal() {
+			return nil // already processed by concurrent request
+		}
+		p.Status = event.Status
+		if event.Status == entity.PaymentStatusPaid {
+			p.PaidAt = event.PaidAt
+		}
+		oldStatus := fresh.Status
 		if err := u.paymentRepo.Update(ctx, p); err != nil {
 			return err
 		}

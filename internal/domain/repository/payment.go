@@ -24,6 +24,9 @@ type ListPaymentFilter struct {
 type PaymentRepository interface {
 	Save(ctx context.Context, payment *entity.Payment) error
 	FindByID(ctx context.Context, id string) (*entity.Payment, error)
+	// FindByIDForUpdate locks the payment row (SELECT FOR UPDATE) inside an active
+	// transaction. Use inside database.RunInTx to serialize concurrent webhook delivery.
+	FindByIDForUpdate(ctx context.Context, id string) (*entity.Payment, error)
 	// FindByExternalID looks up a payment by provider + externalID.
 	// Both are required because the unique constraint is (provider, external_id).
 	FindByExternalID(ctx context.Context, provider entity.Provider, externalID string) (*entity.Payment, error)

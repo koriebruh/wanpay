@@ -77,6 +77,29 @@ func (r *paymentRepo) FindByID(ctx context.Context, id string) (*entity.Payment,
 	return toEntityPayment(row), nil
 }
 
+func (r *paymentRepo) FindByIDForUpdate(ctx context.Context, id string) (*entity.Payment, error) {
+	q := database.QuerierFromContext(ctx, r.db)
+	const query = `SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount,
+		currency, description, customer_name, customer_email, customer_phone, va_number, bank_code,
+		qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at,
+		metadata, provider_payment_id FROM payments WHERE id = $1 FOR UPDATE`
+	var row gen.Payment
+	err := q.QueryRowContext(ctx, query, id).Scan(
+		&row.ID, &row.MerchantID, &row.ExternalID, &row.Method, &row.Provider, &row.Status,
+		&row.Amount, &row.FeeAmount, &row.Currency, &row.Description, &row.CustomerName,
+		&row.CustomerEmail, &row.CustomerPhone, &row.VaNumber, &row.BankCode, &row.QrString,
+		&row.QrImageUrl, &row.ExpiryAt, &row.PaidAt, &row.FailedAt, &row.CancelledAt,
+		&row.CreatedAt, &row.UpdatedAt, &row.Metadata, &row.ProviderPaymentID,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, apperror.NotFound("payment %s not found", id)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get payment for update: %w", err)
+	}
+	return toEntityPayment(row), nil
+}
+
 func (r *paymentRepo) FindByExternalID(ctx context.Context, provider entity.Provider, externalID string) (*entity.Payment, error) {
 	row, err := r.queries(ctx).GetPaymentByExternalID(ctx, gen.GetPaymentByExternalIDParams{
 		Provider:   string(provider),
