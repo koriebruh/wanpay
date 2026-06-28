@@ -274,6 +274,11 @@ func healthHandler(db database.SQLDB, c cache.Cache) echo.HandlerFunc {
 			components["cache"] = "unhealthy"
 		}
 
+		var outboxBacklog int64
+		_ = db.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM outbox WHERE delivered_at IS NULL AND failed_at IS NULL`,
+		).Scan(&outboxBacklog)
+
 		status := "ok"
 		httpCode := http.StatusOK
 		for _, v := range components {
@@ -285,8 +290,9 @@ func healthHandler(db database.SQLDB, c cache.Cache) echo.HandlerFunc {
 		}
 
 		return ec.JSON(httpCode, map[string]any{
-			"status":     status,
-			"components": components,
+			"status":         status,
+			"components":     components,
+			"outbox_backlog": outboxBacklog,
 		})
 	}
 }
