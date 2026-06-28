@@ -43,6 +43,16 @@ type Disbursement struct {
 	UpdatedAt     time.Time    `json:"updated_at"`
 }
 
+type FeeDefault struct {
+	ID           string          `json:"id"`
+	Va           json.RawMessage `json:"va"`
+	Qris         json.RawMessage `json:"qris"`
+	Disbursement json.RawMessage `json:"disbursement"`
+	UpdatedBy    string          `json:"updated_by"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	CreatedAt    time.Time       `json:"created_at"`
+}
+
 type Merchant struct {
 	ID                string          `json:"id"`
 	Name              string          `json:"name"`
@@ -138,6 +148,17 @@ type PaymentAudit struct {
 	Actor     string          `json:"actor"`
 	Metadata  json.RawMessage `json:"metadata"`
 	CreatedAt time.Time       `json:"created_at"`
+}
+
+type PlatformMargin struct {
+	ID           string          `json:"id"`
+	Enabled      bool            `json:"enabled"`
+	Va           json.RawMessage `json:"va"`
+	Qris         json.RawMessage `json:"qris"`
+	Disbursement json.RawMessage `json:"disbursement"`
+	UpdatedBy    string          `json:"updated_by"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	CreatedAt    time.Time       `json:"created_at"`
 }
 
 type ProviderBalance struct {

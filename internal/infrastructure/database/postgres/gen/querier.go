@@ -23,6 +23,7 @@ type Querier interface {
 	GetBankAccountByID(ctx context.Context, id string) (MerchantBankAccount, error)
 	GetDisbursementByExternalID(ctx context.Context, arg GetDisbursementByExternalIDParams) (Disbursement, error)
 	GetDisbursementByID(ctx context.Context, id string) (Disbursement, error)
+	GetFeeDefault(ctx context.Context) (FeeDefault, error)
 	GetMerchantBalance(ctx context.Context, merchantID string) (int64, error)
 	GetMerchantByAPIKey(ctx context.Context, apiKey string) (Merchant, error)
 	GetMerchantByEmail(ctx context.Context, email string) (Merchant, error)
@@ -31,6 +32,7 @@ type Querier interface {
 	GetMutationByReferenceID(ctx context.Context, arg GetMutationByReferenceIDParams) (Mutation, error)
 	GetPaymentByExternalID(ctx context.Context, arg GetPaymentByExternalIDParams) (Payment, error)
 	GetPaymentByID(ctx context.Context, id string) (Payment, error)
+	GetPlatformMargin(ctx context.Context) (PlatformMargin, error)
 	GetPrimaryBankAccount(ctx context.Context, merchantID string) (MerchantBankAccount, error)
 	GetProviderBalance(ctx context.Context, provider string) (ProviderBalance, error)
 	InsertAdmin(ctx context.Context, arg InsertAdminParams) (Admin, error)
@@ -65,8 +67,10 @@ type Querier interface {
 	UpdateAdminPassword(ctx context.Context, arg UpdateAdminPasswordParams) error
 	UpdateBankAccount(ctx context.Context, arg UpdateBankAccountParams) (MerchantBankAccount, error)
 	UpdateDisbursementStatus(ctx context.Context, arg UpdateDisbursementStatusParams) (Disbursement, error)
+	UpdateFeeDefault(ctx context.Context, arg UpdateFeeDefaultParams) (FeeDefault, error)
 	UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) (Merchant, error)
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) (Payment, error)
+	UpdatePlatformMargin(ctx context.Context, arg UpdatePlatformMarginParams) (PlatformMargin, error)
 	UpsertProviderBalance(ctx context.Context, arg UpsertProviderBalanceParams) (ProviderBalance, error)
 }
 

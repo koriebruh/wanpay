@@ -25,6 +25,7 @@ type disbursementUsecase struct {
 	mutationRepo     repository.MutationRepository
 	outboxRepo       *postgres.OutboxRepo
 	merchantRepo     repository.MerchantRepository
+	feeResolver      *FeeResolver
 	db               database.SQLDB
 	log              *zap.Logger
 }
@@ -35,6 +36,7 @@ func NewDisbursementUsecase(
 	mutationRepo repository.MutationRepository,
 	outboxRepo *postgres.OutboxRepo,
 	merchantRepo repository.MerchantRepository,
+	feeResolver *FeeResolver,
 	db database.SQLDB,
 	log *zap.Logger,
 ) usecase.DisbursementUsecase {
@@ -44,6 +46,7 @@ func NewDisbursementUsecase(
 		mutationRepo:     mutationRepo,
 		outboxRepo:       outboxRepo,
 		merchantRepo:     merchantRepo,
+		feeResolver:      feeResolver,
 		db:               db,
 		log:              log,
 	}
@@ -82,7 +85,14 @@ func (u *disbursementUsecase) Disburse(ctx context.Context, input usecase.Disbur
 		return nil, err
 	}
 
-	fee := computeMethodFee(merchant.FeeConfig.Disbursement, input.Amount)
+	feeRes, err := u.feeResolver.ResolveDisbursement(ctx, merchant, input.Amount)
+	if err != nil {
+		u.log.Warn("disbursement fee resolution failed, using zero fee",
+			zap.String("merchant_id", input.MerchantID),
+			zap.Error(err),
+		)
+	}
+	fee := feeRes.TotalFee
 
 	// Reservation pattern: lock merchant, check balance (subtracting pending disbursements),
 	// and INSERT a pending disbursement record — all inside one transaction.

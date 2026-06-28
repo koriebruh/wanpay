@@ -151,4 +151,14 @@ func registerAdminRoutes(e *echo.Echo, r Routes) {
 	admins.POST("", r.Admin.CreateAdmin)
 	admins.GET("", r.Admin.ListAdmins)
 	admins.PATCH("/:id/deactivate", r.Admin.DeactivateAdmin)
+
+	// Fee management — super_admin and finance
+	feeAdmin := authed.Group("/fees",
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
+	feeAdmin.GET("/default", r.Admin.GetFeeDefault)
+	feeAdmin.PUT("/default", r.Admin.UpdateFeeDefault,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
+	feeAdmin.GET("/margin", r.Admin.GetPlatformMargin)
+	feeAdmin.PUT("/margin", r.Admin.UpdatePlatformMargin,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin))
 }

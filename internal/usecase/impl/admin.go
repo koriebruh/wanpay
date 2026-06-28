@@ -23,6 +23,7 @@ type adminUsecase struct {
 	disbursementRepo    repository.DisbursementRepository
 	mutationRepo        repository.MutationRepository
 	providerBalanceRepo repository.ProviderBalanceRepository
+	feeRepo             repository.FeeRepository
 	cfg                 config.AdminConfig
 }
 
@@ -34,6 +35,7 @@ func NewAdminUsecase(
 	disbursementRepo repository.DisbursementRepository,
 	mutationRepo repository.MutationRepository,
 	providerBalanceRepo repository.ProviderBalanceRepository,
+	feeRepo repository.FeeRepository,
 	cfg config.AdminConfig,
 ) usecase.AdminUsecase {
 	return &adminUsecase{
@@ -44,6 +46,7 @@ func NewAdminUsecase(
 		disbursementRepo:    disbursementRepo,
 		mutationRepo:        mutationRepo,
 		providerBalanceRepo: providerBalanceRepo,
+		feeRepo:             feeRepo,
 		cfg:                 cfg,
 	}
 }
@@ -430,4 +433,37 @@ func normalizePagination(page, limit int) (int, int) {
 		limit = 100
 	}
 	return page, limit
+}
+
+func (u *adminUsecase) GetFeeDefault(ctx context.Context) (*entity.FeeDefault, error) {
+	return u.feeRepo.GetDefault(ctx)
+}
+
+func (u *adminUsecase) UpdateFeeDefault(ctx context.Context, adminID string, fee entity.FeeConfig) error {
+	f, err := u.feeRepo.GetDefault(ctx)
+	if err != nil {
+		return err
+	}
+	f.VA = fee.VA
+	f.QRIS = fee.QRIS
+	f.Disbursement = fee.Disbursement
+	f.UpdatedBy = adminID
+	return u.feeRepo.UpdateDefault(ctx, f)
+}
+
+func (u *adminUsecase) GetPlatformMargin(ctx context.Context) (*entity.PlatformMargin, error) {
+	return u.feeRepo.GetMargin(ctx)
+}
+
+func (u *adminUsecase) UpdatePlatformMargin(ctx context.Context, adminID string, enabled bool, margin entity.FeeConfig) error {
+	m, err := u.feeRepo.GetMargin(ctx)
+	if err != nil {
+		return err
+	}
+	m.Enabled = enabled
+	m.VA = margin.VA
+	m.QRIS = margin.QRIS
+	m.Disbursement = margin.Disbursement
+	m.UpdatedBy = adminID
+	return u.feeRepo.UpdateMargin(ctx, m)
 }

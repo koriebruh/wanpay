@@ -121,4 +121,10 @@ type AdminUsecase interface {
 	// Self
 	GetMe(ctx context.Context, adminID string) (*AdminOutput, error)
 	ChangePassword(ctx context.Context, adminID, oldPassword, newPassword string) error
+
+	// Fee management
+	GetFeeDefault(ctx context.Context) (*entity.FeeDefault, error)
+	UpdateFeeDefault(ctx context.Context, adminID string, fee entity.FeeConfig) error
+	GetPlatformMargin(ctx context.Context) (*entity.PlatformMargin, error)
+	UpdatePlatformMargin(ctx context.Context, adminID string, enabled bool, margin entity.FeeConfig) error
 }

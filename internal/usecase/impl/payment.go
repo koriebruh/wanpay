@@ -24,6 +24,7 @@ type paymentUsecase struct {
 	auditRepo    repository.AuditRepository
 	outboxRepo   *postgres.OutboxRepo
 	merchantRepo repository.MerchantRepository
+	feeResolver  *FeeResolver
 	db           database.SQLDB
 	log          *zap.Logger
 }
@@ -35,6 +36,7 @@ func NewPaymentUsecase(
 	auditRepo repository.AuditRepository,
 	outboxRepo *postgres.OutboxRepo,
 	merchantRepo repository.MerchantRepository,
+	feeResolver *FeeResolver,
 	db database.SQLDB,
 	log *zap.Logger,
 ) usecase.PaymentUsecase {
@@ -45,6 +47,7 @@ func NewPaymentUsecase(
 		auditRepo:    auditRepo,
 		outboxRepo:   outboxRepo,
 		merchantRepo: merchantRepo,
+		feeResolver:  feeResolver,
 		db:           db,
 		log:          log,
 	}
@@ -337,7 +340,15 @@ func (u *paymentUsecase) HandleWebhook(ctx context.Context, provider entity.Prov
 		}
 		fee := int64(0)
 		if p.Status == entity.PaymentStatusPaid {
-			fee = computeMethodFee(feeForMethod(merchant, p.Method), p.Amount)
+			res, err := u.feeResolver.Resolve(ctx, merchant, p.Method, p.Amount)
+			if err != nil {
+				u.log.Warn("fee resolution failed, using zero fee",
+					zap.String("payment_id", p.ID),
+					zap.Error(err),
+				)
+			} else {
+				fee = res.TotalFee
+			}
 			if err := u.mutationRepo.Save(ctx, &entity.Mutation{
 				ReferenceID:   p.ID,
 				ReferenceType: entity.MutationRefPayment,
@@ -442,13 +453,3 @@ func (u *paymentUsecase) ListPayments(ctx context.Context, input usecase.ListPay
 	}, nil
 }
 
-func feeForMethod(m *entity.Merchant, method entity.PaymentMethod) entity.MethodFee {
-	switch method {
-	case entity.PaymentMethodVA:
-		return m.FeeConfig.VA
-	case entity.PaymentMethodQRIS:
-		return m.FeeConfig.QRIS
-	default:
-		return entity.MethodFee{}
-	}
-}

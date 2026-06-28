@@ -110,6 +110,8 @@ func (a *App) Run() error {
 	outboxRepo := postgres.NewOutboxRepo(db)
 	adminRepo := postgres.NewAdminRepo(db)
 	providerBalanceRepo := postgres.NewProviderBalanceRepo(db)
+	feeRepo := postgres.NewFeeRepo(db)
+	feeResolver := impl.NewFeeResolver(feeRepo)
 
 	// Payment gateways
 	cbCfg := cfg.Provider.CircuitBreaker
@@ -159,11 +161,11 @@ func (a *App) Run() error {
 	}
 
 	// Usecases
-	paymentUC := impl.NewPaymentUsecase(payGWs, paymentRepo, mutationRepo, auditRepo, outboxRepo, merchantRepo, db, log)
-	disbursementUC := impl.NewDisbursementUsecase(disbGWs, disbursementRepo, mutationRepo, outboxRepo, merchantRepo, db, log)
+	paymentUC := impl.NewPaymentUsecase(payGWs, paymentRepo, mutationRepo, auditRepo, outboxRepo, merchantRepo, feeResolver, db, log)
+	disbursementUC := impl.NewDisbursementUsecase(disbGWs, disbursementRepo, mutationRepo, outboxRepo, merchantRepo, feeResolver, db, log)
 	mutationUC := impl.NewMutationUsecase(mutationRepo)
 	merchantUC := impl.NewMerchantUsecase(merchantRepo, mutationRepo, outboxRepo, db)
-	adminUC := impl.NewAdminUsecase(adminRepo, merchantRepo, merchantUC, paymentRepo, disbursementRepo, mutationRepo, providerBalanceRepo, cfg.Admin)
+	adminUC := impl.NewAdminUsecase(adminRepo, merchantRepo, merchantUC, paymentRepo, disbursementRepo, mutationRepo, providerBalanceRepo, feeRepo, cfg.Admin)
 
 	// Task queue (optional — requires Redis)
 	if cfg.TaskQueue.Enabled && cfg.Redis.Enabled {

@@ -420,3 +420,58 @@ func (h *AdminHandler) DeactivateAdmin(c echo.Context) error {
 	}
 	return response.OK(c, map[string]string{"message": "admin deactivated"})
 }
+
+// ── Fee management ────────────────────────────────────────────────────────────
+
+func (h *AdminHandler) GetFeeDefault(c echo.Context) error {
+	out, err := h.uc.GetFeeDefault(c.Request().Context())
+	if err != nil {
+		return err
+	}
+	return response.OK(c, out)
+}
+
+func (h *AdminHandler) UpdateFeeDefault(c echo.Context) error {
+	adminID := c.Get(middleware.ContextKeyAdminID).(string)
+	var body struct {
+		FeeConfig entity.FeeConfig `json:"fee_config" validate:"required"`
+		Reason    string           `json:"reason"     validate:"required,min=10"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return err
+	}
+	if err := c.Validate(&body); err != nil {
+		return err
+	}
+	if err := h.uc.UpdateFeeDefault(c.Request().Context(), adminID, body.FeeConfig); err != nil {
+		return err
+	}
+	return response.OK(c, map[string]string{"message": "fee default updated"})
+}
+
+func (h *AdminHandler) GetPlatformMargin(c echo.Context) error {
+	out, err := h.uc.GetPlatformMargin(c.Request().Context())
+	if err != nil {
+		return err
+	}
+	return response.OK(c, out)
+}
+
+func (h *AdminHandler) UpdatePlatformMargin(c echo.Context) error {
+	adminID := c.Get(middleware.ContextKeyAdminID).(string)
+	var body struct {
+		Enabled   bool             `json:"enabled"`
+		Margin    entity.FeeConfig `json:"margin" validate:"required"`
+		Reason    string           `json:"reason" validate:"required,min=10"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return err
+	}
+	if err := c.Validate(&body); err != nil {
+		return err
+	}
+	if err := h.uc.UpdatePlatformMargin(c.Request().Context(), adminID, body.Enabled, body.Margin); err != nil {
+		return err
+	}
+	return response.OK(c, map[string]string{"message": "platform margin updated"})
+}
