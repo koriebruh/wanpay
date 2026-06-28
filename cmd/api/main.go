@@ -16,6 +16,9 @@ func main() {
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(daemonCmd)
 	rootCmd.AddCommand(migrateCmd)
+	rootCmd.AddCommand(seedAdminCmd)
+	rootCmd.AddCommand(seedMerchantCmd)
+	rootCmd.AddCommand(seedDevCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

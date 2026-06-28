@@ -3,7 +3,8 @@
         sqlc \
         test test-unit test-integration test-e2e \
         lint tidy vet infra-up infra-down infra-logs docker-build \
-        install-hooks install-tools
+        install-hooks install-tools \
+        seed-admin seed-merchant seed-dev
 
 APP_NAME = wanpey
 CMD_PATH = ./cmd/api
@@ -36,6 +37,20 @@ daemon-stop: build
 ## daemon-status: check if daemon is running
 daemon-status: build
 	$(BIN) daemon status
+
+## seed-admin: create first super_admin account (run once after migrate-up)
+## Usage: make seed-admin EMAIL=admin@example.com PASSWORD=secret ROLE=super_admin
+seed-admin: build
+	$(BIN) seed-admin --email $(EMAIL) --password $(PASSWORD) --role $(or $(ROLE),super_admin)
+
+## seed-merchant: create a sample merchant and print its API key
+## Usage: make seed-merchant EMAIL=m@example.com NAME="My Store" WEBHOOK_URL=http://localhost:9090/hook
+seed-merchant: build
+	$(BIN) seed-merchant --email $(EMAIL) --name "$(or $(NAME),Sample Merchant)" $(if $(WEBHOOK_URL),--webhook-url $(WEBHOOK_URL))
+
+## seed-dev: populate database with full dev sample data (idempotent)
+seed-dev: build
+	$(BIN) seed-dev
 
 ## migrate-up: apply all pending migrations
 migrate-up: build
