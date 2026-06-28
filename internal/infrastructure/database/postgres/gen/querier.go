@@ -9,9 +9,13 @@ import (
 )
 
 type Querier interface {
+	CountAdmins(ctx context.Context) (int64, error)
+	GetAdminByEmail(ctx context.Context, email string) (Admin, error)
 	GetAdminByID(ctx context.Context, id string) (Admin, error)
-	GetAdminByUsername(ctx context.Context, username string) (Admin, error)
 	InsertAdmin(ctx context.Context, arg InsertAdminParams) (Admin, error)
+	ListAdmins(ctx context.Context, arg ListAdminsParams) ([]Admin, error)
+	UpdateAdmin(ctx context.Context, arg UpdateAdminParams) (Admin, error)
+	UpdateAdminLastLogin(ctx context.Context, id string) error
 	CountBankAccounts(ctx context.Context, merchantID string) (int64, error)
 	CountDisbursementsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	CountMutationsByMerchant(ctx context.Context, merchantID string) (int64, error)

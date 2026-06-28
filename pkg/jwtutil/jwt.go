@@ -20,12 +20,12 @@ const (
 
 // Claims is the JWT payload for admin sessions.
 type Claims struct {
-	Sub      string    `json:"sub"`
-	Username string    `json:"username"`
-	Role     string    `json:"role"`
-	Type     TokenType `json:"type"`
-	Exp      int64     `json:"exp"`
-	Iat      int64     `json:"iat"`
+	Sub   string    `json:"sub"`
+	Email string    `json:"email"`
+	Role  string    `json:"role"`
+	Type  TokenType `json:"type"`
+	Exp   int64     `json:"exp"`
+	Iat   int64     `json:"iat"`
 }
 
 var jwtHeader = base64url(`{"alg":"HS256","typ":"JWT"}`)

@@ -85,9 +85,16 @@ func (r *mutationRepo) GetBalance(ctx context.Context, merchantID string) (int64
 func (r *mutationRepo) List(ctx context.Context, f repository.ListMutationFilter) ([]*entity.Mutation, int64, error) {
 	q := database.QuerierFromContext(ctx, r.db)
 
-	conds := []string{"merchant_id = $1"}
-	args := []any{f.MerchantID}
-	idx := 2
+	var conds []string
+	var args []any
+	idx := 1
+
+	// MerchantID filter is optional — empty string means "all merchants" (admin use case).
+	if f.MerchantID != "" {
+		conds = append(conds, fmt.Sprintf("merchant_id = $%d", idx))
+		args = append(args, f.MerchantID)
+		idx++
+	}
 
 	if f.Type != nil {
 		conds = append(conds, fmt.Sprintf("type = $%d", idx))
@@ -105,7 +112,10 @@ func (r *mutationRepo) List(ctx context.Context, f repository.ListMutationFilter
 		idx++
 	}
 
-	where := " WHERE " + strings.Join(conds, " AND ")
+	where := ""
+	if len(conds) > 0 {
+		where = " WHERE " + strings.Join(conds, " AND ")
+	}
 
 	var total int64
 	if err := q.QueryRowContext(ctx, "SELECT COUNT(*) FROM mutations"+where, args...).Scan(&total); err != nil {

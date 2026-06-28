@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	seedUsername string
+	seedEmail    string
 	seedPassword string
 	seedRole     string
 )
@@ -27,8 +27,13 @@ var seedAdminCmd = &cobra.Command{
 		if len(seedPassword) < 8 {
 			return fmt.Errorf("password must be at least 8 characters")
 		}
-		if seedRole != string(entity.AdminRoleAdmin) && seedRole != string(entity.AdminRoleSuperAdmin) {
-			return fmt.Errorf("role must be 'admin' or 'super_admin'")
+		validRoles := map[string]bool{
+			string(entity.AdminRoleSuperAdmin): true,
+			string(entity.AdminRoleOps):        true,
+			string(entity.AdminRoleFinance):    true,
+		}
+		if !validRoles[seedRole] {
+			return fmt.Errorf("role must be one of: super_admin, ops, finance")
 		}
 
 		cfg, err := config.Load()
@@ -47,22 +52,22 @@ var seedAdminCmd = &cobra.Command{
 
 		repo := postgres.NewAdminRepo(db)
 		a := &entity.Admin{
-			Username:     seedUsername,
+			Email:        seedEmail,
 			PasswordHash: string(hash),
 			Role:         entity.AdminRole(seedRole),
 		}
 		if err := repo.Save(context.Background(), a); err != nil {
-			return fmt.Errorf("create admin (username may already exist): %w", err)
+			return fmt.Errorf("create admin (email may already exist): %w", err)
 		}
-		fmt.Printf("admin %q created (role=%s)\n", a.Username, a.Role)
+		fmt.Printf("admin %q created (role=%s)\n", a.Email, a.Role)
 		return nil
 	},
 }
 
 func init() {
-	seedAdminCmd.Flags().StringVar(&seedUsername, "username", "", "admin username (required)")
+	seedAdminCmd.Flags().StringVar(&seedEmail, "email", "", "admin email address (required)")
 	seedAdminCmd.Flags().StringVar(&seedPassword, "password", "", "admin password, min 8 chars (required)")
-	seedAdminCmd.Flags().StringVar(&seedRole, "role", "super_admin", "admin role: admin | super_admin")
-	_ = seedAdminCmd.MarkFlagRequired("username")
+	seedAdminCmd.Flags().StringVar(&seedRole, "role", "super_admin", "admin role: super_admin | ops | finance")
+	_ = seedAdminCmd.MarkFlagRequired("email")
 	_ = seedAdminCmd.MarkFlagRequired("password")
 }

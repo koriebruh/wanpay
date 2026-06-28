@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"wanpey/core/internal/domain/entity"
 	"wanpey/core/internal/domain/repository"
@@ -199,4 +200,73 @@ func (r *merchantRepo) CountBankAccounts(ctx context.Context, merchantID string)
 		return 0, fmt.Errorf("count bank accounts: %w", err)
 	}
 	return int(n), nil
+}
+
+func (r *merchantRepo) List(ctx context.Context, f repository.ListMerchantFilter) ([]*entity.Merchant, int64, error) {
+	q := database.QuerierFromContext(ctx, r.db)
+
+	var conds []string
+	var args []any
+	idx := 1
+
+	if f.Status != "" {
+		conds = append(conds, fmt.Sprintf("status = $%d", idx))
+		args = append(args, f.Status)
+		idx++
+	}
+	if f.Search != "" {
+		conds = append(conds, fmt.Sprintf("(name ILIKE $%d OR email ILIKE $%d)", idx, idx))
+		args = append(args, f.Search+"%")
+		idx++
+	}
+
+	where := ""
+	if len(conds) > 0 {
+		where = " WHERE " + strings.Join(conds, " AND ")
+	}
+
+	var total int64
+	if err := q.QueryRowContext(ctx, "SELECT COUNT(*) FROM merchants"+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count merchants: %w", err)
+	}
+	if total == 0 {
+		return []*entity.Merchant{}, 0, nil
+	}
+
+	page, limit := normalizePage(f.Page, f.Limit)
+	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic,gosec
+	query := fmt.Sprintf(
+		"SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, daily_cashout_limit, deleted_at, created_at, updated_at FROM merchants%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		where, idx, idx+1,
+	)
+
+	rows, err := q.QueryContext(ctx, query, listArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list merchants: %w", err)
+	}
+	defer rows.Close()
+
+	var result []*entity.Merchant
+	for rows.Next() {
+		var m gen.Merchant
+		if err := rows.Scan(
+			&m.ID, &m.Name, &m.Email, &m.Phone, &m.Status,
+			&m.ApiKey, &m.WebhookUrl, &m.WebhookSecret, &m.FeeConfig,
+			&m.DailyCashoutLimit, &m.DeletedAt, &m.CreatedAt, &m.UpdatedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan merchant: %w", err)
+		}
+		result = append(result, toEntityMerchant(m))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows error: %w", err)
+	}
+	return result, total, nil
+}
+
+func (r *merchantRepo) SoftDelete(ctx context.Context, merchantID string) error {
+	if err := r.queries(ctx).SoftDeleteMerchant(ctx, merchantID); err != nil {
+		return fmt.Errorf("soft delete merchant: %w", err)
+	}
+	return nil
 }

@@ -101,7 +101,7 @@ func (a *App) Run() error {
 	db := do.MustInvoke[database.SQLDB](a.injector)
 	c := do.MustInvoke[cache.Cache](a.injector)
 
-	// Repositories 
+	// Repositories
 	merchantRepo := postgres.NewMerchantRepo(db)
 	paymentRepo := postgres.NewPaymentRepo(db)
 	disbursementRepo := postgres.NewDisbursementRepo(db)
@@ -109,6 +109,7 @@ func (a *App) Run() error {
 	auditRepo := postgres.NewAuditRepo(db)
 	outboxRepo := postgres.NewOutboxRepo(db)
 	adminRepo := postgres.NewAdminRepo(db)
+	providerBalanceRepo := postgres.NewProviderBalanceRepo(db)
 
 	// Payment gateways
 	cbCfg := cfg.Provider.CircuitBreaker
@@ -162,11 +163,10 @@ func (a *App) Run() error {
 	disbursementUC := impl.NewDisbursementUsecase(disbGWs, disbursementRepo, mutationRepo, outboxRepo, merchantRepo, db, log)
 	mutationUC := impl.NewMutationUsecase(mutationRepo)
 	merchantUC := impl.NewMerchantUsecase(merchantRepo, mutationRepo)
-	adminUC := impl.NewAdminUsecase(adminRepo, merchantRepo, merchantUC, cfg.Admin)
+	adminUC := impl.NewAdminUsecase(adminRepo, merchantRepo, merchantUC, paymentRepo, disbursementRepo, mutationRepo, providerBalanceRepo, cfg.Admin)
 
 	// Task queue (optional — requires Redis)
 	if cfg.TaskQueue.Enabled && cfg.Redis.Enabled {
-		providerBalanceRepo := postgres.NewProviderBalanceRepo(db)
 
 		client, err := taskqueue.ProvideClient(cfg.Redis)
 		if err != nil {

@@ -5,8 +5,9 @@ import "time"
 type AdminRole string
 
 const (
-	AdminRoleAdmin      AdminRole = "admin"
 	AdminRoleSuperAdmin AdminRole = "super_admin"
+	AdminRoleOps        AdminRole = "ops"
+	AdminRoleFinance    AdminRole = "finance"
 )
 
 // Admin is an internal operator account for the Wanpey platform.
@@ -14,9 +15,11 @@ const (
 // Passwords are stored as bcrypt hashes. JWTs are issued on login.
 type Admin struct {
 	ID           string
-	Username     string
+	Email        string
 	PasswordHash string
 	Role         AdminRole
+	IsActive     bool
+	LastLoginAt  *time.Time
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

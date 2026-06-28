@@ -12,37 +12,41 @@ import (
 )
 
 type Admin struct {
-	ID           string    `json:"id"`
-	Username     string    `json:"username"`
-	PasswordHash string    `json:"password_hash"`
-	Role         string    `json:"role"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           string       `json:"id"`
+	Email        string       `json:"email"`
+	PasswordHash string       `json:"password_hash"`
+	Role         string       `json:"role"`
+	IsActive     bool         `json:"is_active"`
+	LastLoginAt  sql.NullTime `json:"last_login_at"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
 }
 
 // Needed to satisfy sql.ErrNoRows check in repo.
 var _ = sql.ErrNoRows
 
 const insertAdmin = `-- name: InsertAdmin :one
-INSERT INTO admins (id, username, password_hash, role)
-VALUES (gen_random_uuid()::TEXT, $1, $2, $3)
-RETURNING id, username, password_hash, role, created_at, updated_at
+INSERT INTO admins (id, email, password_hash, role, is_active)
+VALUES (gen_random_uuid()::TEXT, $1, $2, $3, true)
+RETURNING id, email, password_hash, role, is_active, last_login_at, created_at, updated_at
 `
 
 type InsertAdminParams struct {
-	Username     string `json:"username"`
+	Email        string `json:"email"`
 	PasswordHash string `json:"password_hash"`
 	Role         string `json:"role"`
 }
 
 func (q *Queries) InsertAdmin(ctx context.Context, arg InsertAdminParams) (Admin, error) {
-	row := q.db.QueryRowContext(ctx, insertAdmin, arg.Username, arg.PasswordHash, arg.Role)
+	row := q.db.QueryRowContext(ctx, insertAdmin, arg.Email, arg.PasswordHash, arg.Role)
 	var i Admin
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
+		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
+		&i.IsActive,
+		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -50,7 +54,7 @@ func (q *Queries) InsertAdmin(ctx context.Context, arg InsertAdminParams) (Admin
 }
 
 const getAdminByID = `-- name: GetAdminByID :one
-SELECT id, username, password_hash, role, created_at, updated_at FROM admins
+SELECT id, email, password_hash, role, is_active, last_login_at, created_at, updated_at FROM admins
 WHERE id = $1
 `
 
@@ -59,30 +63,121 @@ func (q *Queries) GetAdminByID(ctx context.Context, id string) (Admin, error) {
 	var i Admin
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
+		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
+		&i.IsActive,
+		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const getAdminByUsername = `-- name: GetAdminByUsername :one
-SELECT id, username, password_hash, role, created_at, updated_at FROM admins
-WHERE username = $1
+const getAdminByEmail = `-- name: GetAdminByEmail :one
+SELECT id, email, password_hash, role, is_active, last_login_at, created_at, updated_at FROM admins
+WHERE email = $1
 `
 
-func (q *Queries) GetAdminByUsername(ctx context.Context, username string) (Admin, error) {
-	row := q.db.QueryRowContext(ctx, getAdminByUsername, username)
+func (q *Queries) GetAdminByEmail(ctx context.Context, email string) (Admin, error) {
+	row := q.db.QueryRowContext(ctx, getAdminByEmail, email)
 	var i Admin
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
+		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
+		&i.IsActive,
+		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const updateAdminLastLogin = `-- name: UpdateAdminLastLogin :exec
+UPDATE admins SET last_login_at = NOW(), updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) UpdateAdminLastLogin(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, updateAdminLastLogin, id)
+	return err
+}
+
+const updateAdmin = `-- name: UpdateAdmin :one
+UPDATE admins SET role = $2, is_active = $3, updated_at = NOW()
+WHERE id = $1 RETURNING id, email, password_hash, role, is_active, last_login_at, created_at, updated_at
+`
+
+type UpdateAdminParams struct {
+	ID       string `json:"id"`
+	Role     string `json:"role"`
+	IsActive bool   `json:"is_active"`
+}
+
+func (q *Queries) UpdateAdmin(ctx context.Context, arg UpdateAdminParams) (Admin, error) {
+	row := q.db.QueryRowContext(ctx, updateAdmin, arg.ID, arg.Role, arg.IsActive)
+	var i Admin
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.IsActive,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listAdmins = `-- name: ListAdmins :many
+SELECT id, email, password_hash, role, is_active, last_login_at, created_at, updated_at FROM admins
+ORDER BY created_at DESC LIMIT $1 OFFSET $2
+`
+
+type ListAdminsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListAdmins(ctx context.Context, arg ListAdminsParams) ([]Admin, error) {
+	rows, err := q.db.QueryContext(ctx, listAdmins, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Admin
+	for rows.Next() {
+		var i Admin
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Role,
+			&i.IsActive,
+			&i.LastLoginAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countAdmins = `-- name: CountAdmins :one
+SELECT COUNT(*) FROM admins
+`
+
+func (q *Queries) CountAdmins(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAdmins)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

@@ -69,22 +69,75 @@ func Register(e *echo.Echo, r Routes) {
 	registerAdminRoutes(e, r)
 }
 
-// registerAdminRoutes mounts /admin endpoints. Login/refresh are public; the rest
-// require a valid admin access token (JWT). Admin creation is super_admin-only.
+// registerAdminRoutes mounts /admin endpoints with the full permission matrix.
+// Login and refresh are public; all other routes require a valid admin access token.
 func registerAdminRoutes(e *echo.Echo, r Routes) {
 	if r.Admin == nil {
 		return
 	}
+
 	admin := e.Group("/admin")
+
+	// Public — no auth required
 	admin.POST("/login", r.Admin.Login)
 	admin.POST("/token/refresh", r.Admin.RefreshToken)
 
+	// Authenticated — valid admin JWT required for all routes below
 	authed := admin.Group("", httpmw.AdminJWTAuth(r.AdminJWTSecret))
-	authed.POST("/admins", r.Admin.CreateAdmin, httpmw.RequireRole(entity.AdminRoleSuperAdmin))
 
+	// Self
+	authed.GET("/me", r.Admin.GetMe)
+	authed.PATCH("/me/password", r.Admin.ChangePassword)
+
+	// Merchants
 	merchants := authed.Group("/merchants")
-	merchants.POST("", r.Admin.CreateMerchant)
-	merchants.PATCH("/:id/approve", r.Admin.ApproveMerchant)
-	merchants.PATCH("/:id/suspend", r.Admin.SuspendMerchant)
-	merchants.PATCH("/:id/fee", r.Admin.SetMerchantFee)
+	merchants.POST("", r.Admin.CreateMerchant,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleOps))
+	merchants.GET("", r.Admin.ListMerchants)
+	merchants.GET("/:id", r.Admin.GetMerchant)
+	merchants.PATCH("/:id/approve", r.Admin.ApproveMerchant,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleOps))
+	merchants.PATCH("/:id/suspend", r.Admin.SuspendMerchant,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleOps))
+	merchants.PATCH("/:id/deactivate", r.Admin.DeactivateMerchant,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleOps))
+	merchants.PATCH("/:id/fee", r.Admin.SetMerchantFee,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
+	merchants.PATCH("/:id/cashout-limit", r.Admin.UpdateCashoutLimit,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
+	merchants.POST("/:id/api-key/regenerate", r.Admin.RegenerateAPIKey,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleOps))
+	merchants.DELETE("/:id", r.Admin.DeleteMerchant,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin))
+	merchants.GET("/:id/bank-accounts", r.Admin.ListMerchantBankAccounts)
+	merchants.PATCH("/:id/bank-accounts/:aid/verify", r.Admin.VerifyBankAccount,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleOps))
+
+	// Payments
+	adminPayments := authed.Group("/payments")
+	adminPayments.GET("", r.Admin.ListAllPayments)
+	adminPayments.GET("/:id", r.Admin.GetPayment)
+
+	// Disbursements
+	adminDisbursements := authed.Group("/disbursements")
+	adminDisbursements.GET("", r.Admin.ListAllDisbursements)
+	adminDisbursements.GET("/:id", r.Admin.GetDisbursement)
+
+	// Mutations — finance + super_admin only
+	adminMutations := authed.Group("/mutations",
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
+	adminMutations.GET("", r.Admin.ListAllMutations)
+
+	// Provider balances — finance + super_admin only
+	providerBalances := authed.Group("/provider-balances",
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
+	providerBalances.GET("", r.Admin.GetProviderBalances)
+	providerBalances.PATCH("/:provider", r.Admin.UpdateProviderBalance)
+
+	// Admin management — super_admin only
+	admins := authed.Group("/admins",
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin))
+	admins.POST("", r.Admin.CreateAdmin)
+	admins.GET("", r.Admin.ListAdmins)
+	admins.PATCH("/:id/deactivate", r.Admin.DeactivateAdmin)
 }

@@ -6,6 +6,16 @@ import (
 	"wanpey/core/internal/domain/entity"
 )
 
+// ListMerchantFilter filters merchant list queries.
+// If Status is empty, all statuses are returned. If Search is non-empty,
+// name and email are searched (case-insensitive prefix).
+type ListMerchantFilter struct {
+	Status string
+	Search string
+	Page   int
+	Limit  int
+}
+
 // MerchantRepository is the persistence port for Merchant and MerchantBankAccount entities.
 type MerchantRepository interface {
 	Save(ctx context.Context, merchant *entity.Merchant) error
@@ -30,4 +40,10 @@ type MerchantRepository interface {
 	UnsetPrimaryBankAccounts(ctx context.Context, merchantID string) error
 	DeleteBankAccount(ctx context.Context, accountID string) error
 	CountBankAccounts(ctx context.Context, merchantID string) (int, error)
+	// List returns a paginated list of merchants with optional filters.
+	// If filter.Status is empty all statuses are included.
+	// If filter.Search is non-empty it matches name or email (ILIKE prefix).
+	List(ctx context.Context, filter ListMerchantFilter) ([]*entity.Merchant, int64, error)
+	// SoftDelete sets deleted_at on the merchant record (never hard-deletes).
+	SoftDelete(ctx context.Context, merchantID string) error
 }
