@@ -88,6 +88,9 @@ func buildEcho(cfg *config.Config, log *zap.Logger) *echo.Echo {
 	}))
 
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		Skipper: func(c echo.Context) bool {
+			return len(c.Path()) >= 8 && c.Path()[:8] == "/swagger"
+		},
 		XSSProtection:         "1; mode=block",
 		ContentTypeNosniff:    "nosniff",
 		XFrameOptions:         "DENY",
