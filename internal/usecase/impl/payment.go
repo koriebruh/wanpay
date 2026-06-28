@@ -214,6 +214,27 @@ func (u *paymentUsecase) CancelPayment(ctx context.Context, merchantID, paymentI
 		return apperror.UnprocessableEntity("payment cannot be cancelled in status %s", p.Status)
 	}
 
+	// Step 1: Mark as cancelling before calling provider.
+	// If the process dies after this and before step 3, the payment stays
+	// in "cancelling" and ops can resolve it manually. It cannot be retried
+	// by the merchant because CanCancel() returns false for cancelling.
+	oldStatus := p.Status
+	if err := database.RunInTx(ctx, u.db, nil, func(ctx context.Context) error {
+		p.Status = entity.PaymentStatusCancelling
+		if err := u.paymentRepo.Update(ctx, p); err != nil {
+			return err
+		}
+		return u.auditRepo.Save(ctx, &entity.PaymentAudit{
+			PaymentID: p.ID,
+			EventType: entity.AuditEventStatusChanged,
+			OldStatus: &oldStatus,
+			NewStatus: entity.PaymentStatusCancelling,
+			Actor:     "merchant:" + merchantID,
+		})
+	}); err != nil {
+		return err
+	}
+
 	gw, err := u.gateway(p.Provider)
 	if err != nil {
 		return err
@@ -224,21 +245,40 @@ func (u *paymentUsecase) CancelPayment(ctx context.Context, merchantID, paymentI
 	if p.ProviderPaymentID != "" {
 		cancelID = p.ProviderPaymentID
 	}
-	if err := gw.CancelPayment(ctx, cancelID); err != nil {
-		return fmt.Errorf("cancel via provider: %w", err)
-	}
+	providerErr := gw.CancelPayment(ctx, cancelID)
 
-	now := time.Now()
-	p.Status = entity.PaymentStatusCancelled
-	p.CancelledAt = &now
-
+	// Step 3: Finalize status based on provider result.
 	return database.RunInTx(ctx, u.db, nil, func(ctx context.Context) error {
+		cancellingStatus := entity.PaymentStatusCancelling
+		if providerErr != nil {
+			// Provider failed — roll back to pending so merchant can retry.
+			u.log.Warn("cancel provider call failed, reverting to pending",
+				zap.String("payment_id", p.ID),
+				zap.Error(providerErr),
+			)
+			p.Status = entity.PaymentStatusPending
+			p.CancelledAt = nil
+			if err := u.paymentRepo.Update(ctx, p); err != nil {
+				return err
+			}
+			return u.auditRepo.Save(ctx, &entity.PaymentAudit{
+				PaymentID: p.ID,
+				EventType: entity.AuditEventStatusChanged,
+				OldStatus: &cancellingStatus,
+				NewStatus: entity.PaymentStatusPending,
+				Actor:     "system:cancel_revert",
+			})
+		}
+		now := time.Now()
+		p.Status = entity.PaymentStatusCancelled
+		p.CancelledAt = &now
 		if err := u.paymentRepo.Update(ctx, p); err != nil {
 			return err
 		}
 		return u.auditRepo.Save(ctx, &entity.PaymentAudit{
 			PaymentID: p.ID,
 			EventType: entity.AuditEventPaymentCancelled,
+			OldStatus: &cancellingStatus,
 			NewStatus: entity.PaymentStatusCancelled,
 			Actor:     "merchant:" + merchantID,
 		})

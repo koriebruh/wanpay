@@ -5,11 +5,12 @@ import "time"
 type PaymentStatus string
 
 const (
-	PaymentStatusPending   PaymentStatus = "pending"
-	PaymentStatusPaid      PaymentStatus = "paid"
-	PaymentStatusExpired   PaymentStatus = "expired"
-	PaymentStatusFailed    PaymentStatus = "failed"
-	PaymentStatusCancelled PaymentStatus = "cancelled"
+	PaymentStatusPending    PaymentStatus = "pending"
+	PaymentStatusCancelling PaymentStatus = "cancelling" // transient: provider call in-flight
+	PaymentStatusPaid       PaymentStatus = "paid"
+	PaymentStatusExpired    PaymentStatus = "expired"
+	PaymentStatusFailed     PaymentStatus = "failed"
+	PaymentStatusCancelled  PaymentStatus = "cancelled"
 )
 
 type PaymentMethod string
@@ -91,13 +92,12 @@ func (p *Payment) IsFinal() bool {
 	switch p.Status {
 	case PaymentStatusPaid, PaymentStatusExpired, PaymentStatusFailed, PaymentStatusCancelled:
 		return true
-	case PaymentStatusPending:
-		return false
 	}
 	return false
 }
 
 // CanCancel returns true if the merchant is allowed to cancel this payment.
+// cancelling means a prior cancel attempt is in-flight — do not allow a second.
 func (p *Payment) CanCancel() bool {
 	return p.Status == PaymentStatusPending
 }
