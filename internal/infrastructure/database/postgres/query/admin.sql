@@ -22,5 +22,9 @@ WHERE id = $1 RETURNING *;
 -- name: ListAdmins :many
 SELECT * FROM admins ORDER BY created_at DESC LIMIT $1 OFFSET $2;
 
+-- name: UpdateAdminPassword :exec
+UPDATE admins SET password_hash = $2, updated_at = NOW()
+WHERE id = $1;
+
 -- name: CountAdmins :one
 SELECT COUNT(*) FROM admins;

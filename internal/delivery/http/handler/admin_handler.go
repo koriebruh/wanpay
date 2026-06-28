@@ -186,6 +186,9 @@ func (h *AdminHandler) UpdateCashoutLimit(c echo.Context) error {
 	if err := c.Bind(&input); err != nil {
 		return err
 	}
+	if err := c.Validate(&input); err != nil {
+		return err
+	}
 	if err := h.uc.UpdateDailyCashoutLimit(c.Request().Context(), c.Param("id"), input.LimitIDR); err != nil {
 		return err
 	}
@@ -357,6 +360,9 @@ func (h *AdminHandler) UpdateProviderBalance(c echo.Context) error {
 	if err := c.Bind(&input); err != nil {
 		return err
 	}
+	if err := c.Validate(&input); err != nil {
+		return err
+	}
 	provider := entity.Provider(c.Param("provider"))
 	if err := h.uc.UpdateProviderBalance(c.Request().Context(), provider, input.BalanceIDR); err != nil {
 		return err
@@ -408,7 +414,8 @@ func (h *AdminHandler) ListAdmins(c echo.Context) error {
 }
 
 func (h *AdminHandler) DeactivateAdmin(c echo.Context) error {
-	if err := h.uc.DeactivateAdmin(c.Request().Context(), c.Param("id")); err != nil {
+	callerID := c.Get(middleware.ContextKeyAdminID).(string)
+	if err := h.uc.DeactivateAdmin(c.Request().Context(), callerID, c.Param("id")); err != nil {
 		return err
 	}
 	return response.OK(c, map[string]string{"message": "admin deactivated"})

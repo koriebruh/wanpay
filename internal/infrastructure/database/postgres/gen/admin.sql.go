@@ -171,6 +171,16 @@ func (q *Queries) ListAdmins(ctx context.Context, arg ListAdminsParams) ([]Admin
 	return items, nil
 }
 
+const updateAdminPassword = `-- name: UpdateAdminPassword :exec
+UPDATE admins SET password_hash = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) UpdateAdminPassword(ctx context.Context, id string, passwordHash string) error {
+	_, err := q.db.ExecContext(ctx, updateAdminPassword, id, passwordHash)
+	return err
+}
+
 const countAdmins = `-- name: CountAdmins :one
 SELECT COUNT(*) FROM admins
 `

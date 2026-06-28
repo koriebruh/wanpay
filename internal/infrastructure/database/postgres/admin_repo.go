@@ -90,6 +90,13 @@ func (r *adminRepo) Update(ctx context.Context, a *entity.Admin) error {
 	return nil
 }
 
+func (r *adminRepo) UpdatePassword(ctx context.Context, id, hash string) error {
+	if err := r.queries(ctx).UpdateAdminPassword(ctx, id, hash); err != nil {
+		return fmt.Errorf("update admin password: %w", err)
+	}
+	return nil
+}
+
 func (r *adminRepo) List(ctx context.Context, page, limit int) ([]*entity.Admin, int64, error) {
 	page, limit = normalizePage(page, limit)
 

@@ -16,6 +16,7 @@ type Querier interface {
 	ListAdmins(ctx context.Context, arg ListAdminsParams) ([]Admin, error)
 	UpdateAdmin(ctx context.Context, arg UpdateAdminParams) (Admin, error)
 	UpdateAdminLastLogin(ctx context.Context, id string) error
+	UpdateAdminPassword(ctx context.Context, id string, passwordHash string) error
 	CountBankAccounts(ctx context.Context, merchantID string) (int64, error)
 	CountDisbursementsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	CountMutationsByMerchant(ctx context.Context, merchantID string) (int64, error)

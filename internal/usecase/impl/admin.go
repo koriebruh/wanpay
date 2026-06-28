@@ -57,7 +57,7 @@ func (u *adminUsecase) Login(ctx context.Context, input usecase.AdminLoginInput)
 		return nil, apperror.Unauthorized("invalid credentials")
 	}
 	if !admin.IsActive {
-		return nil, apperror.Unauthorized("account is deactivated")
+		return nil, apperror.Unauthorized("invalid credentials")
 	}
 	if bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(input.Password)) != nil {
 		return nil, apperror.Unauthorized("invalid credentials")
@@ -123,8 +123,7 @@ func (u *adminUsecase) ListMerchants(ctx context.Context, filter usecase.AdminLi
 	}
 	items := make([]*usecase.MerchantOutput, len(merchants))
 	for i, m := range merchants {
-		balance, _ := u.mutationRepo.GetBalance(ctx, m.ID)
-		items[i] = toMerchantOutput(m, balance)
+		items[i] = toMerchantOutput(m, 0)
 	}
 	page, limit := normalizePagination(filter.Page, filter.Limit)
 	return &usecase.MerchantListOutput{Items: items, Total: total, Page: page, Limit: limit}, nil
@@ -369,7 +368,10 @@ func (u *adminUsecase) ListAdmins(ctx context.Context, page, limit int) ([]*usec
 	return items, total, nil
 }
 
-func (u *adminUsecase) DeactivateAdmin(ctx context.Context, adminID string) error {
+func (u *adminUsecase) DeactivateAdmin(ctx context.Context, callerID, adminID string) error {
+	if callerID == adminID {
+		return apperror.BadRequest("cannot deactivate your own account")
+	}
 	a, err := u.adminRepo.FindByID(ctx, adminID)
 	if err != nil {
 		return err
@@ -400,8 +402,7 @@ func (u *adminUsecase) ChangePassword(ctx context.Context, adminID, oldPassword,
 	if err != nil {
 		return fmt.Errorf("hash new password: %w", err)
 	}
-	a.PasswordHash = string(hash)
-	return u.adminRepo.Update(ctx, a)
+	return u.adminRepo.UpdatePassword(ctx, adminID, string(hash))
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

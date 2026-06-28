@@ -13,5 +13,6 @@ type AdminRepository interface {
 	FindByEmail(ctx context.Context, email string) (*entity.Admin, error)
 	UpdateLastLogin(ctx context.Context, id string) error
 	Update(ctx context.Context, admin *entity.Admin) error
+	UpdatePassword(ctx context.Context, id, hash string) error
 	List(ctx context.Context, page, limit int) ([]*entity.Admin, int64, error)
 }

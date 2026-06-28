@@ -205,7 +205,7 @@ func (r *merchantRepo) CountBankAccounts(ctx context.Context, merchantID string)
 func (r *merchantRepo) List(ctx context.Context, f repository.ListMerchantFilter) ([]*entity.Merchant, int64, error) {
 	q := database.QuerierFromContext(ctx, r.db)
 
-	var conds []string
+	conds := []string{"deleted_at IS NULL"}
 	var args []any
 	idx := 1
 
@@ -220,10 +220,7 @@ func (r *merchantRepo) List(ctx context.Context, f repository.ListMerchantFilter
 		idx++
 	}
 
-	where := ""
-	if len(conds) > 0 {
-		where = " WHERE " + strings.Join(conds, " AND ")
-	}
+	where := " WHERE " + strings.Join(conds, " AND ")
 
 	var total int64
 	if err := q.QueryRowContext(ctx, "SELECT COUNT(*) FROM merchants"+where, args...).Scan(&total); err != nil {

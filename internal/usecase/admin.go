@@ -129,7 +129,7 @@ type AdminUsecase interface {
 	// Admin management (super_admin only)
 	CreateAdmin(ctx context.Context, input CreateAdminInput) (*AdminOutput, error)
 	ListAdmins(ctx context.Context, page, limit int) ([]*AdminOutput, int64, error)
-	DeactivateAdmin(ctx context.Context, adminID string) error
+	DeactivateAdmin(ctx context.Context, callerID, adminID string) error
 
 	// Self
 	GetMe(ctx context.Context, adminID string) (*AdminOutput, error)
