@@ -48,7 +48,7 @@ func New(cfg config.MidtransConfig, log *zap.Logger) (gateway.PaymentGateway, er
 	return &Gateway{
 		serverKey:  cfg.ServerKey,
 		baseURL:    baseURL,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: &http.Client{Timeout: 15 * time.Second},
 		log:        log,
 	}, nil
 }

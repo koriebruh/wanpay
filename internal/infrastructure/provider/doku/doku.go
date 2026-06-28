@@ -84,7 +84,7 @@ func New(cfg config.DokuConfig, log *zap.Logger) (*Gateway, error) {
 		hmacKey:    hmacKey,
 		privateKey: privateKey,
 		baseURL:    baseURL,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: &http.Client{Timeout: 15 * time.Second},
 		log:        log,
 	}, nil
 }

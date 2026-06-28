@@ -72,7 +72,7 @@ func New(cfg config.IPaymuConfig, log *zap.Logger) (gateway.PaymentGateway, erro
 		baseURL:       baseURL,
 		notifyURL:     notifyURL,
 		webhookSecret: cfg.WebhookSecret,
-		httpClient:    &http.Client{Timeout: 30 * time.Second},
+		httpClient:    &http.Client{Timeout: 15 * time.Second},
 		log:           log,
 	}, nil
 }

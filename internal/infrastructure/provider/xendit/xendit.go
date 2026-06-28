@@ -62,7 +62,7 @@ func New(cfg config.XenditConfig, log *zap.Logger) (*Gateway, error) {
 	return &Gateway{
 		secretKey:    cfg.SecretKey,
 		webhookToken: cfg.WebhookToken,
-		httpClient:   &http.Client{Timeout: 30 * time.Second},
+		httpClient:   &http.Client{Timeout: 15 * time.Second},
 		log:          log,
 	}, nil
 }
