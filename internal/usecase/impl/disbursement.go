@@ -66,6 +66,17 @@ func (u *disbursementUsecase) Disburse(ctx context.Context, input usecase.Disbur
 		return nil, apperror.Forbidden("merchant account is not active")
 	}
 
+	account, err := u.merchantRepo.FindBankAccountByID(ctx, input.BankAccountID)
+	if err != nil {
+		return nil, err
+	}
+	if account.MerchantID != input.MerchantID {
+		return nil, apperror.NotFound("bank account %s not found", input.BankAccountID)
+	}
+	if !account.IsVerified {
+		return nil, apperror.UnprocessableEntity("bank account %s is not verified — contact admin to verify", input.BankAccountID)
+	}
+
 	gw, err := u.disbGateway(input.Provider)
 	if err != nil {
 		return nil, err
@@ -113,9 +124,9 @@ func (u *disbursementUsecase) Disburse(ctx context.Context, input usecase.Disbur
 			ExternalID:    "", // set after provider call
 			Provider:      input.Provider,
 			Status:        entity.DisbursementStatusPending,
-			BankCode:      input.BankCode,
-			AccountNumber: input.AccountNumber,
-			AccountName:   input.AccountName,
+			BankCode:      account.BankCode,
+			AccountNumber: account.AccountNumber,
+			AccountName:   account.AccountName,
 			Amount:        input.Amount,
 			FeeAmount:     fee,
 			Currency:      input.Currency,
@@ -130,9 +141,9 @@ func (u *disbursementUsecase) Disburse(ctx context.Context, input usecase.Disbur
 	extID := externalID()
 	resp, err := gw.Disburse(ctx, gateway.DisburseRequest{
 		ExternalID:    extID,
-		BankCode:      input.BankCode,
-		AccountNumber: input.AccountNumber,
-		AccountName:   input.AccountName,
+		BankCode:      account.BankCode,
+		AccountNumber: account.AccountNumber,
+		AccountName:   account.AccountName,
 		Amount:        input.Amount,
 		Currency:      input.Currency,
 		Description:   input.Description,
