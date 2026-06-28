@@ -2,7 +2,7 @@ CREATE TABLE fee_audit_logs (
     id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_type  TEXT        NOT NULL,
     entity_id    TEXT        NOT NULL,
-    admin_id     UUID        NOT NULL REFERENCES admins(id),
+    admin_id     TEXT        NOT NULL,
     admin_email  TEXT        NOT NULL,
     old_value    JSONB,
     new_value    JSONB       NOT NULL,
