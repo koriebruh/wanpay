@@ -39,6 +39,9 @@ make migrate-status
 # sqlc — regenerate after editing query/*.sql files
 make sqlc
 
+# Seed first admin (run once after first migrate-up)
+go run ./cmd/api seed-admin --email admin@example.com --password secret --role super_admin
+
 # Daemon
 make daemon-start
 make daemon-stop
@@ -90,7 +93,8 @@ internal/infrastructure/database/
     ├── provider.go     ← postgres driver + ProvideDB for DI
     ├── mapper.go       ← converts gen.* ↔ entity.*
     ├── *_repo.go       ← implements domain repository interfaces
-    └── outbox_repo.go  ← outbox operations for worker
+    ├── fee_repo.go     ← fee_defaults, platform_margin, fee_holidays, fee_audit_logs
+    └── outbox_repo.go  ← outbox CRUD: Insert, Lease, MarkDelivered, MarkFailedFinal, ScheduleRetry, ListByMerchant
 ```
 
 **Transaction pattern** — always use `database.RunInTx` for multi-step operations:
@@ -98,7 +102,7 @@ internal/infrastructure/database/
 err = database.RunInTx(ctx, db, nil, func(ctx context.Context) error {
     if err := paymentRepo.Update(ctx, p); err != nil { return err }
     if err := mutationRepo.Save(ctx, m); err != nil { return err }
-    return outboxRepo.Insert(ctx, eventType, targetURL, payload)
+    return outboxRepo.Insert(ctx, eventType, targetURL, merchantID, payload)
 })
 ```
 Tx is propagated via context — all repos call `database.TxFromContext(ctx)` internally. No need to pass tx explicitly.
@@ -124,15 +128,77 @@ Workers must never query the DB after stage 4 starts — always check `ctx.Done(
 
 **Auth** (`internal/delivery/http/middleware/auth.go`): `X-API-Key` header → SHA256 hash → `MerchantRepository.FindByAPIKey`. Returns 401 for both not-found and DB errors (avoids key enumeration). Sets `merchant_id` in Echo context.
 
-**Outbox** (`internal/infrastructure/worker/outbox_worker.go`): poll every 5s, atomic lease via `FOR UPDATE SKIP LOCKED`. Delivers up to 5 webhooks concurrently per batch. DB status writes (`markDelivered`, `scheduleRetry`) use a detached 5s context so they succeed even during graceful shutdown. `OutboxRepo.Insert()` must be called inside the same DB transaction as the payment status update.
+**Outbox** (`internal/infrastructure/worker/outbox_worker.go`): poll every 5s, atomic lease via `FOR UPDATE SKIP LOCKED`. Delivers up to 5 webhooks concurrently per batch. DB status writes use a detached 5s context so they succeed even during graceful shutdown. All status updates go through `OutboxRepo` methods — no raw SQL in worker. `OutboxRepo.Insert()` must be called inside the same DB transaction as the payment status update. Outbox rows carry `merchant_id` for webhook signing key lookup and delivery history.
+
+**Webhook signing** (`pkg/signature/`, `internal/infrastructure/worker/outbox_worker.go`): outbound merchant webhooks are signed with the merchant's `webhook_signing_key` (HMAC-SHA256). Merchants verify with `X-Wanpey-Signature` header. Standard payload format via `pkg/webhook/payload.go`.
+
+**Webhook IP allowlist** (`internal/delivery/http/middleware/webhook_allowlist.go`): optional per-provider CIDR allowlist applied to `/webhooks/*` routes. Configure via `[provider.midtrans] webhook_allowed_ips = ["..."]`. Empty list = accept all. Enabled at router construction when any provider has IPs configured.
 
 **Circuit breaker** (`internal/infrastructure/provider/circuit_breaker.go`): wraps every provider call. `CBPaymentGateway` and `CBDisbursementGateway` implement the gateway interfaces and proxy all network calls through `gobreaker`. Settings configurable via `[provider.circuit_breaker]` in config. `ParseWebhook` bypasses the breaker (local operation, no network).
+
+**Two-step cancel** (`internal/usecase/impl/payment.go` `CancelPayment`): sets status → `cancelling` in DB first (committed tx), then calls provider cancel, then sets `cancelled`. If provider call fails, reverts to `pending`. The intermediate `cancelling` state prevents double-cancel races and makes the cancel operation recoverable.
+
+**Disbursement reservation** (`internal/usecase/impl/disbursement.go`): inserts disbursement row with `pending` status inside the balance-check transaction before calling the provider. Prevents double-spend from concurrent requests. Disbursement must reference a verified registered bank account (`DisburseInput.BankAccountID` → `FindBankAccountByID` + `IsVerified` check).
+
+**AddBankAccount race** (`internal/usecase/impl/merchant.go`): `CountBankAccounts` runs inside `RunInTx` with `FOR UPDATE` lock — serializes concurrent adds to enforce the 3-account maximum.
 
 **Signature** (`pkg/signature/`): `Sign`/`Verify` use HMAC-SHA256 with `hmac.Equal` (constant-time). `SignSHA512`/`VerifySHA512` for DOKU.
 
 **PII** (`pkg/mask/`): always wrap sensitive fields with `mask.Card`, `mask.Email`, `mask.Phone`, `mask.Name`, `mask.Secret` before passing to `zap.String`.
 
 **Validation** (`pkg/validator/`): `EchoValidator` wraps go-playground/validator. Registered with `e.Validator`. Handlers call `c.Validate(&input)` — returns `apperror.BadRequest` with per-field details on failure.
+
+**Payment expiry** (`internal/infrastructure/worker/expiry_worker.go`): background worker polls expired pending payments and updates status to `expired` with a `PAYMENT_EXPIRED` audit event.
+
+## Fee Resolution Engine
+
+All fee calculations go through `FeeResolver` (`internal/usecase/impl/fee_resolver.go`) — never compute fees ad-hoc in handlers or usecases.
+
+**Resolution priority (highest → lowest):**
+1. Merchant's contracted `FeeConfig` (per-method, stored in `merchants` table)
+2. Global default (`fee_defaults` table, admin-managed)
+3. Platform margin (`platform_margin` table) — added on top of base fee when `enabled = true`
+4. Holiday surcharge (`fee_holidays` table) — added on top when `date` matches today and `is_active = true`
+
+**Total fee** = base fee (merchant or global) + platform margin + holiday surcharge
+
+**Boot seed**: on startup, if `platform_margin.updated_by = ''` (migration default), config values from `[fee.margin]` are seeded into the DB. Once an admin updates it manually, the seed is skipped forever.
+
+**Fee audit log**: every fee change (global default, platform margin, merchant fee, holiday) must call `FeeRepository.WriteAuditLog()` with admin_id, reason, old_value, new_value. The `fee_audit_logs` table is immutable append-only.
+
+**`FeeResolution` struct fields:**
+- `BaseFee` — from merchant contract or global default
+- `PlatformMargin` — Wanpey's margin
+- `HolidaySurcharge` — 0 if not a holiday
+- `TotalFee` — sum of all three
+- `Source` — `"merchant_contract"` or `"global_default"`
+- `HolidayName` — name of the holiday if applicable
+
+## Admin System
+
+**Entity** (`internal/domain/entity/admin.go`): `Admin` with roles `super_admin`, `ops`, `finance`.
+
+**Auth**: JWT-based. Login → `POST /admin/login` → access token (short TTL) + refresh token. All admin routes except login/refresh require `Authorization: Bearer <access_token>`. Middleware: `AdminJWTAuth` + `RequireRole`.
+
+**Permission matrix:**
+
+| Action | super_admin | ops | finance |
+|--------|-------------|-----|---------|
+| Create/delete merchant | ✅ | ✅ | ❌ |
+| Approve/suspend merchant | ✅ | ✅ | ❌ |
+| Set merchant fee | ✅ | ❌ | ✅ |
+| Set cashout limit | ✅ | ❌ | ✅ |
+| Verify bank account | ✅ | ✅ | ❌ |
+| Manage admins | ✅ | ❌ | ❌ |
+| View payments/disbursements | ✅ | ✅ | ✅ |
+| View/update provider balances | ✅ | ❌ | ✅ |
+| Manage fee defaults/margin | ✅ | ❌ | ✅ |
+| Update platform margin | ✅ | ❌ | ❌ |
+| Manage holiday surcharges | ✅ | ❌ | ✅ |
+
+**Merchant registration**: public `POST /v1/merchants` is removed. Merchants are created by admins only via `POST /admin/merchants`.
+
+**Self-deactivation guard**: admin cannot deactivate their own account.
 
 ## Rate Limiting
 
@@ -154,6 +220,8 @@ internal/infrastructure/provider/
 └── ipaymu/ipaymu.go                   ← iPaymu direct API adapter
 ```
 
+**Provider HTTP timeouts**: all providers set `http.Client{Timeout: 15s}`. Echo request timeout is 30s — this gives 15s buffer for handler overhead and prevents provider timeout from racing with Echo context cancellation.
+
 **Provider capabilities** — each provider declares what it supports via `Capabilities()`:
 
 | Provider | CashIn (VA/QRIS) | CashOut (Disbursement) |
@@ -169,6 +237,8 @@ POST /webhooks/{provider}/payment       → PaymentUsecase.HandleWebhook
 POST /webhooks/{provider}/disbursement  → DisbursementUsecase.HandleDisbursementCallback
 ```
 
+**Webhook idempotency**: `HandleWebhook` re-checks payment status inside the transaction with `FindByIDForUpdate` after acquiring the row lock. If `IsFinal()` is true, returns nil (idempotent). Prevents double mutation when provider retries before receiving a response.
+
 **Midtrans specifics:**
 - Mandiri VA uses `payment_type: "echannel"` — response gives `bill_key` + `biller_code` (always `70012`)
 - QRIS: `qr_string` fetched via second GET to `actions[0].url`
@@ -183,13 +253,15 @@ POST /webhooks/{provider}/disbursement  → DisbursementUsecase.HandleDisburseme
 
 **DOKU specifics:**
 - Two-step auth: B2B token (SHA256withRSA) then request (HMAC-SHA512 hex)
-- Private key (RSA PKCS8 PEM) required — generate and register public key in DOKU dashboard
+- Private key (RSA PKCS8 PEM) required — supply via `DOKU_PRIVATE_KEY_PEM` env var (takes precedence) or `private_key_pem` in config. **Never commit `.pem` files** — `*.pem` is in `.gitignore`.
 - `migrate_dsn` must bypass PgBouncer (advisory locks used by golang-migrate)
+- BaseURL switches between sandbox/production based on `cfg.IsProduction`
 
 **iPaymu specifics:**
 - Auth headers: `va` (merchant VA), `signature`, `timestamp` (no Authorization header)
 - Signature: `HMAC-SHA256(apiKey, "POST:{va}:{SHA256(body)}:{apiKey}")` — timestamp NOT in signature
 - Body must omit empty string fields — iPaymu strips them before hashing on server side
+- Webhook verified via `x-wt` token header
 - Does NOT support cancel or disbursement via API v2
 
 ## HTTP Response Format
@@ -205,40 +277,52 @@ POST /webhooks/{provider}/disbursement  → DisbursementUsecase.HandleDisburseme
 { "success": false, "error": { "message": "...", "details": [...] }, "meta": { "trace_id": "..." } }
 ```
 
-`trace_id` is the OpenTelemetry span ID — searchable in Jaeger UI. `X-Request-ID` header is set on every response by Echo middleware.
+`trace_id` is the OpenTelemetry span ID — searchable in Jaeger UI. `X-Request-ID` header is set on every response by Echo middleware. `merchant_id` is included in every request log line when the route is authenticated.
 
 ## Business Model: PayFac / Aggregator
 
 Wanpey uses the **Payment Facilitator** model:
 - Wanpey holds **one account per provider** (Midtrans, Xendit, DOKU, iPaymu) — all merchant payments flow into Wanpey's provider accounts
 - Merchant balances are tracked in the **internal `Mutation` ledger**, not at the provider level
-- Cash-out (disbursement) is sent from Wanpey's provider balance to the merchant's registered bank account
+- Cash-out (disbursement) is sent from Wanpey's provider balance to the merchant's **verified registered bank account**
 - Merchants are never exposed to provider accounts — switching or adding providers is invisible to them
 - `provider_balances` table tracks the platform's known balance at each provider for audit and reconciliation
 
 **Fee structure** (FeeBearer is always merchant — never customer):
 - `entity.FeeConfig` = per-merchant contracted fee (VA flat, QRIS %, Disbursement flat)
-- `config.FeeConfig.Margin` = platform-wide Wanpey margin added on top, toggled via `[fee.margin] enabled`
-- Effective fee = merchant FeeConfig + platform margin (if enabled)
+- `fee_defaults` table = global fallback fee when merchant has no contract
+- `platform_margin` table = Wanpey's margin added on top, toggled per method
+- `fee_holidays` table = date-specific surcharge added on top (e.g. public holidays)
+- Effective fee = base (merchant or global) + platform margin + holiday surcharge
 - Net settlement = paid amount − effective fee → recorded as `Mutation.Amount`
+- All fee changes require admin action + mandatory reason → written to `fee_audit_logs`
 
 ## Merchant Entity
 
 Key design decisions:
-- `APIKey` stored as SHA256 hash in DB. Format: `wpay_live_<32chars>` or `wpay_test_<32chars>`. Raw key shown once at creation/regeneration only
+- `APIKey` stored as SHA256 hash in DB. Format: `wpay_live_<32chars>` (production) or `wpay_test_<32chars>` (sandbox). `IsProduction` field on merchant controls which prefix is used. Raw key shown once at creation/regeneration only.
 - `WebhookSecret` stored as SHA256 hash. Used to sign outbound webhook payloads via HMAC-SHA256 (`pkg/signature`)
-- Max **3 bank accounts** per merchant (`entity.MaxBankAccounts`). Limit enforced in usecase, not entity
+- Max **3 bank accounts** per merchant (`entity.MaxBankAccounts`). Limit enforced in usecase inside a `RunInTx` with `SELECT COUNT(*) FOR UPDATE` to prevent concurrent bypass.
 - `Merchant.Balance` is NOT a stored field — always calculated live via `MutationRepository.GetBalance()`
 - `Merchant.DailyCashoutLimit` — max total disbursement per day in IDR; `0` = unlimited
 - `Merchant.CanTransact()` must return true before any payment can be created for that merchant
+- Merchant cannot set their own `FeeConfig` — only admins can via `PATCH /admin/merchants/:id/fee` with a mandatory `reason` field
 
 ## Migrations
 
 Format: `migrations/NNNNNN_name.up.sql` / `.down.sql` (golang-migrate v4). Run `make migrate-up` from project root — the `file://migrations` source path is relative to CWD.
 
 Current migrations:
-- `000001_outbox` — outbox table
-- `000002_schema` — all business tables: merchants (+ `daily_cashout_limit`), merchant_bank_accounts, payments, disbursements, mutations, payment_audits, provider_balances
+- `000001_outbox` — outbox table (with `merchant_id`, `last_error`, retry columns)
+- `000002_schema` — all business tables: merchants (`is_production`, `daily_cashout_limit`), merchant_bank_accounts, payments, disbursements, mutations, payment_audits, provider_balances
+- `000003_add_provider_payment_id` — `provider_payment_id` column on payments (required for Xendit cancel/status)
+- `000004_outbox_merchant_webhook` — adds `merchant_id` + `webhook_signing_key` to outbox; per-payment `callback_url`
+- `000005_outbox_webhook` — outbox signing infrastructure
+- `000006_payment_cancelling_status` — adds `cancelling` to payments and payment_audits CHECK constraints
+- `000007_merchant_is_production` — `is_production BOOLEAN NOT NULL DEFAULT FALSE` on merchants
+- `000008_fee_tables` — `fee_defaults` and `platform_margin` tables with seeded default rows
+- `000009_fee_audit_log` — `fee_audit_logs` table (immutable, append-only)
+- `000010_fee_holidays` — `fee_holidays` table with `UNIQUE(date)` constraint
 
 ## Infrastructure
 
@@ -262,14 +346,16 @@ Cron (*/15 min): treasury:check_topup
   → TaskID dedup: only 1 pending topup per provider at a time
 
 treasury:execute_topup
-  → NOT IMPLEMENTED (returns error → visible in Asynqmon dead letter)
-  → implement actual inter-bank transfer + update provider_balances
+  → returns nil with warning log (safe no-op — NOT IMPLEMENTED)
+  → implement actual inter-bank transfer + update provider_balances when ready
   → MaxRetry(3) with exponential backoff
 ```
 
 Large cashout trigger: `HandleLargeCashoutTopupCheck()` — call from disbursement usecase when single cashout > `large_cashout_threshold_idr`.
 
 **Shutdown**: `srv.Shutdown()` + `scheduler.Shutdown()` MUST be called in `app.Shutdown()` to drain in-flight tasks — critical for financial operations (wired during DI task).
+
+**Health endpoint** (`GET /health`): checks DB connectivity, cache reachability, and `outbox_backlog` (count of pending undelivered outbox events). Non-zero backlog is not an error but signals webhook delivery lag.
 
 ## Testing
 
@@ -299,3 +385,8 @@ GitHub Actions CI mirrors pre-push checks exactly — if hooks pass locally, CI 
 `.config.toml` is gitignored. Copy `.config.example.toml` to `.config.toml` to run locally. Path override: `CONFIG_PATH` env var. The `config.Load()` function is public — used by both the DI container and the `migrate` CLI subcommand.
 
 **Important:** `migrate_dsn` must point directly to Postgres (port 5432), not PgBouncer. golang-migrate uses advisory locks which PgBouncer transaction mode does not support.
+
+**Secret env vars** (take precedence over config file values):
+- `DOKU_PRIVATE_KEY_PEM` — DOKU RSA private key PEM content. Use this in production instead of `private_key_pem` in config.
+
+**Fee margin config** (`[fee.margin]`): on first boot, if `platform_margin` table row has `updated_by = ''` (migration default), the config values are seeded into the DB. Once an admin updates the margin via the API, the config values are ignored forever.
