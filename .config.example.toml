@@ -1,4 +1,4 @@
-[taskqueue]
+l[taskqueue]
 enabled     = true
 concurrency = 10      # max concurrent workers
 

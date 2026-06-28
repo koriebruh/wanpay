@@ -8,6 +8,7 @@ import (
 	"wanpey/core/internal/domain/entity"
 	"wanpey/core/internal/domain/repository"
 	"wanpey/core/internal/infrastructure/database"
+	"wanpey/core/internal/infrastructure/database/postgres"
 	"wanpey/core/internal/usecase"
 	"wanpey/core/pkg/apperror"
 )
@@ -15,17 +16,20 @@ import (
 type merchantUsecase struct {
 	merchantRepo repository.MerchantRepository
 	mutationRepo repository.MutationRepository
+	outboxRepo   *postgres.OutboxRepo
 	db           database.SQLDB
 }
 
 func NewMerchantUsecase(
 	merchantRepo repository.MerchantRepository,
 	mutationRepo repository.MutationRepository,
+	outboxRepo *postgres.OutboxRepo,
 	db database.SQLDB,
 ) usecase.MerchantUsecase {
 	return &merchantUsecase{
 		merchantRepo: merchantRepo,
 		mutationRepo: mutationRepo,
+		outboxRepo:   outboxRepo,
 		db:           db,
 	}
 }
@@ -203,3 +207,40 @@ func (u *merchantUsecase) SetPrimaryBankAccount(ctx context.Context, merchantID,
 	a.IsPrimary = true
 	return u.merchantRepo.UpdateBankAccount(ctx, a)
 }
+
+func (u *merchantUsecase) ListWebhookEvents(ctx context.Context, merchantID string, page, limit int) (*usecase.WebhookEventListOutput, error) {
+	rows, total, err := u.outboxRepo.ListByMerchant(ctx, merchantID, page, limit)
+	if err != nil {
+		return nil, err
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	out := &usecase.WebhookEventListOutput{
+		Items: make([]*usecase.WebhookEventOutput, 0, len(rows)),
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	}
+	for _, r := range rows {
+		item := &usecase.WebhookEventOutput{
+			ID:           r.ID,
+			EventType:    r.EventType,
+			TargetURL:    r.TargetUrl,
+			AttemptCount: r.AttemptCount,
+			NextRetryAt:  r.NextRetryAt,
+			CreatedAt:    r.CreatedAt,
+		}
+		if r.DeliveredAt.Valid {
+			t := r.DeliveredAt.Time
+			item.DeliveredAt = &t
+		}
+		if r.FailedAt.Valid {
+			t := r.FailedAt.Time
+			item.FailedAt = &t
+		}
+		out.Items = append(out.Items, item)
+	}
+	return out, nil
+}
+

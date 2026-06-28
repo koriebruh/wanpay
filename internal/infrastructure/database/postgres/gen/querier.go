@@ -6,6 +6,8 @@ package gen
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
@@ -13,6 +15,7 @@ type Querier interface {
 	CountBankAccounts(ctx context.Context, merchantID string) (int64, error)
 	CountDisbursementsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	CountMutationsByMerchant(ctx context.Context, merchantID string) (int64, error)
+	CountOutboxByMerchant(ctx context.Context, merchantID uuid.NullUUID) (int64, error)
 	CountPaymentsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	DeleteBankAccount(ctx context.Context, id string) error
 	GetAdminByEmail(ctx context.Context, email string) (Admin, error)
@@ -43,6 +46,7 @@ type Querier interface {
 	ListBankAccountsByMerchant(ctx context.Context, merchantID string) ([]MerchantBankAccount, error)
 	ListDisbursementsByMerchant(ctx context.Context, arg ListDisbursementsByMerchantParams) ([]Disbursement, error)
 	ListMutationsByMerchant(ctx context.Context, arg ListMutationsByMerchantParams) ([]Mutation, error)
+	ListOutboxByMerchant(ctx context.Context, arg ListOutboxByMerchantParams) ([]Outbox, error)
 	ListPaymentAuditsByPaymentID(ctx context.Context, paymentID string) ([]PaymentAudit, error)
 	ListPaymentsByMerchant(ctx context.Context, arg ListPaymentsByMerchantParams) ([]Payment, error)
 	ListProviderBalances(ctx context.Context) ([]ProviderBalance, error)

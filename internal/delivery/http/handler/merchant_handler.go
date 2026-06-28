@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 
@@ -117,4 +118,30 @@ func (h *MerchantHandler) SetPrimaryBankAccount(c echo.Context) error {
 		return err
 	}
 	return response.OK(c, map[string]string{"message": "primary bank account updated"})
+}
+
+func (h *MerchantHandler) ListWebhookEvents(c echo.Context) error {
+	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	out, err := h.uc.ListWebhookEvents(c.Request().Context(), merchantID, page, limit)
+	if err != nil {
+		return err
+	}
+	totalPages := int(out.Total) / limit
+	if int(out.Total)%limit != 0 {
+		totalPages++
+	}
+	return response.List(c, out.Items, response.Pagination{
+		Page:       out.Page,
+		PerPage:    out.Limit,
+		Total:      int(out.Total),
+		TotalPages: totalPages,
+	})
 }

@@ -63,6 +63,24 @@ type BankAccountOutput struct {
 	CreatedAt     time.Time       `json:"created_at"`
 }
 
+type WebhookEventOutput struct {
+	ID           string     `json:"id"`
+	EventType    string     `json:"event_type"`
+	TargetURL    string     `json:"target_url"`
+	AttemptCount int32      `json:"attempt_count"`
+	DeliveredAt  *time.Time `json:"delivered_at,omitempty"`
+	FailedAt     *time.Time `json:"failed_at,omitempty"`
+	NextRetryAt  time.Time  `json:"next_retry_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+}
+
+type WebhookEventListOutput struct {
+	Items []*WebhookEventOutput `json:"items"`
+	Total int64                 `json:"total"`
+	Page  int                   `json:"page"`
+	Limit int                   `json:"limit"`
+}
+
 type MerchantUsecase interface {
 	Create(ctx context.Context, input CreateMerchantInput) (*CreateMerchantOutput, error)
 	GetMerchant(ctx context.Context, id string) (*MerchantOutput, error)
@@ -74,4 +92,5 @@ type MerchantUsecase interface {
 	ListBankAccounts(ctx context.Context, merchantID string) ([]*BankAccountOutput, error)
 	RemoveBankAccount(ctx context.Context, merchantID, accountID string) error
 	SetPrimaryBankAccount(ctx context.Context, merchantID, accountID string) error
+	ListWebhookEvents(ctx context.Context, merchantID string, page, limit int) (*WebhookEventListOutput, error)
 }

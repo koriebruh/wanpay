@@ -67,6 +67,36 @@ func (r *OutboxRepo) MarkDelivered(ctx context.Context, id string) error {
 	return nil
 }
 
+// ListByMerchant returns outbox events for a merchant, newest first.
+func (r *OutboxRepo) ListByMerchant(ctx context.Context, merchantID string, page, limit int) ([]gen.Outbox, int64, error) {
+	mid := uuid.MustParse(merchantID)
+	total, err := r.q.CountOutboxByMerchant(ctx, uuid.NullUUID{UUID: mid, Valid: true})
+	if err != nil {
+		return nil, 0, fmt.Errorf("count outbox: %w", err)
+	}
+	if total == 0 {
+		return nil, 0, nil
+	}
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	rows, err := r.q.ListOutboxByMerchant(ctx, gen.ListOutboxByMerchantParams{
+		MerchantID: uuid.NullUUID{UUID: mid, Valid: true},
+		Limit:      int32(limit),  //nolint:gosec
+		Offset:     int32((page - 1) * limit), //nolint:gosec
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("list outbox by merchant: %w", err)
+	}
+	return rows, total, nil
+}
+
 // MarkFailed increments the attempt counter and schedules the next retry.
 // When max_attempts is reached, failed_at is set and the event stops being leased.
 func (r *OutboxRepo) MarkFailed(ctx context.Context, id string, nextRetry time.Time) error {

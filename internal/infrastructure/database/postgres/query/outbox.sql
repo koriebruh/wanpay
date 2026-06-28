@@ -28,3 +28,13 @@ SET attempt_count = attempt_count + 1,
                         ELSE NULL
                     END
 WHERE id = $1;
+
+-- name: ListOutboxByMerchant :many
+SELECT * FROM outbox
+WHERE merchant_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountOutboxByMerchant :one
+SELECT COUNT(*) FROM outbox
+WHERE merchant_id = $1;

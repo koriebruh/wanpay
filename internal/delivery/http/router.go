@@ -68,6 +68,8 @@ func Register(e *echo.Echo, r Routes) {
 	bankAccounts.DELETE("/:id", r.Merchant.RemoveBankAccount)
 	bankAccounts.PATCH("/:id/primary", r.Merchant.SetPrimaryBankAccount)
 
+	me.GET("/webhook-events", r.Merchant.ListWebhookEvents)
+
 	registerAdminRoutes(e, r)
 }
 

@@ -13,6 +13,18 @@ import (
 	"github.com/google/uuid"
 )
 
+const countOutboxByMerchant = `-- name: CountOutboxByMerchant :one
+SELECT COUNT(*) FROM outbox
+WHERE merchant_id = $1
+`
+
+func (q *Queries) CountOutboxByMerchant(ctx context.Context, merchantID uuid.NullUUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOutboxByMerchant, merchantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const insertOutboxEvent = `-- name: InsertOutboxEvent :one
 INSERT INTO outbox (id, event_type, payload, target_url, merchant_id, next_retry_at)
 VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
@@ -64,6 +76,55 @@ FOR UPDATE SKIP LOCKED
 
 func (q *Queries) LeaseOutboxEvents(ctx context.Context, limit int32) ([]Outbox, error) {
 	rows, err := q.db.QueryContext(ctx, leaseOutboxEvents, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Outbox{}
+	for rows.Next() {
+		var i Outbox
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventType,
+			&i.Payload,
+			&i.TargetUrl,
+			&i.AttemptCount,
+			&i.MaxAttempts,
+			&i.NextRetryAt,
+			&i.DeliveredAt,
+			&i.FailedAt,
+			&i.LastError,
+			&i.CreatedAt,
+			&i.MerchantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOutboxByMerchant = `-- name: ListOutboxByMerchant :many
+SELECT id, event_type, payload, target_url, attempt_count, max_attempts, next_retry_at, delivered_at, failed_at, last_error, created_at, merchant_id FROM outbox
+WHERE merchant_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListOutboxByMerchantParams struct {
+	MerchantID uuid.NullUUID `json:"merchant_id"`
+	Limit      int32         `json:"limit"`
+	Offset     int32         `json:"offset"`
+}
+
+func (q *Queries) ListOutboxByMerchant(ctx context.Context, arg ListOutboxByMerchantParams) ([]Outbox, error) {
+	rows, err := q.db.QueryContext(ctx, listOutboxByMerchant, arg.MerchantID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
