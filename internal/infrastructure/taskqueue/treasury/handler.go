@@ -90,16 +90,16 @@ func (h *Handler) HandleExecuteTopup(ctx context.Context, t *asynq.Task) error {
 		zap.String("reason", p.Reason),
 	)
 
-	// NOT IMPLEMENTED — return error so task goes to dead letter and is visible in Asynqmon.
-	// Implement actual inter-bank transfer here before enabling in production.
-	// Steps:
-	//   1. Call bank transfer API (BCA / Mandiri / etc.) to move funds to provider account
-	//   2. On success: update provider_balances via providerBalanceRepo.Upsert(ctx, ...)
-	//   3. On failure: return error — asynq retries up to MaxRetry(3) times
-	_ = ctx
-	return fmt.Errorf("execute_topup not implemented: provider=%s amount=%d reason=%s",
-		p.Provider, p.AmountIDR, p.Reason,
+	// Manual top-up required until inter-bank transfer API is integrated.
+	// Log warning so ops team is alerted via monitoring; acknowledge the task
+	// so it does not fill the dead letter queue.
+	h.log.Warn("execute_topup not implemented — manual top-up required",
+		zap.String("provider", string(p.Provider)),
+		zap.Int64("amount_idr", p.AmountIDR),
+		zap.String("reason", p.Reason),
 	)
+	_ = ctx
+	return nil
 }
 
 // HandleLargeCashout is called by the disbursement usecase when a single cashout
