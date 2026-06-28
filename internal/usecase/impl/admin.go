@@ -158,15 +158,28 @@ func (u *adminUsecase) DeleteMerchant(ctx context.Context, merchantID string) er
 }
 
 func (u *adminUsecase) UpdateMerchantFee(ctx context.Context, input usecase.SetMerchantFeeInput) error {
+	admin, err := u.adminRepo.FindByID(ctx, input.AdminID)
+	if err != nil {
+		return err
+	}
 	m, err := u.merchantRepo.FindByID(ctx, input.MerchantID)
 	if err != nil {
 		return err
 	}
+	old := map[string]any{"va": m.FeeConfig.VA, "qris": m.FeeConfig.QRIS, "disbursement": m.FeeConfig.Disbursement}
 	m.FeeConfig = input.FeeConfig
 	if err := u.merchantRepo.Update(ctx, m); err != nil {
 		return fmt.Errorf("update merchant fee: %w", err)
 	}
-	return nil
+	return u.feeRepo.WriteAuditLog(ctx, &entity.FeeAuditLog{
+		EntityType: entity.FeeAuditEntityMerchantFee,
+		EntityID:   input.MerchantID,
+		AdminID:    input.AdminID,
+		AdminEmail: admin.Email,
+		OldValue:   old,
+		NewValue:   map[string]any{"va": input.FeeConfig.VA, "qris": input.FeeConfig.QRIS, "disbursement": input.FeeConfig.Disbursement},
+		Reason:     input.Reason,
+	})
 }
 
 func (u *adminUsecase) UpdateDailyCashoutLimit(ctx context.Context, merchantID string, limitIDR int64) error {
@@ -439,31 +452,98 @@ func (u *adminUsecase) GetFeeDefault(ctx context.Context) (*entity.FeeDefault, e
 	return u.feeRepo.GetDefault(ctx)
 }
 
-func (u *adminUsecase) UpdateFeeDefault(ctx context.Context, adminID string, fee entity.FeeConfig) error {
+func (u *adminUsecase) UpdateFeeDefault(ctx context.Context, adminID, reason string, fee entity.FeeConfig) error {
+	admin, err := u.adminRepo.FindByID(ctx, adminID)
+	if err != nil {
+		return err
+	}
 	f, err := u.feeRepo.GetDefault(ctx)
 	if err != nil {
 		return err
 	}
+	old := map[string]any{"va": f.VA, "qris": f.QRIS, "disbursement": f.Disbursement}
 	f.VA = fee.VA
 	f.QRIS = fee.QRIS
 	f.Disbursement = fee.Disbursement
 	f.UpdatedBy = adminID
-	return u.feeRepo.UpdateDefault(ctx, f)
+	if err := u.feeRepo.UpdateDefault(ctx, f); err != nil {
+		return err
+	}
+	return u.feeRepo.WriteAuditLog(ctx, &entity.FeeAuditLog{
+		EntityType: entity.FeeAuditEntityGlobalDefault,
+		EntityID:   "singleton",
+		AdminID:    adminID,
+		AdminEmail: admin.Email,
+		OldValue:   old,
+		NewValue:   map[string]any{"va": fee.VA, "qris": fee.QRIS, "disbursement": fee.Disbursement},
+		Reason:     reason,
+	})
 }
 
 func (u *adminUsecase) GetPlatformMargin(ctx context.Context) (*entity.PlatformMargin, error) {
 	return u.feeRepo.GetMargin(ctx)
 }
 
-func (u *adminUsecase) UpdatePlatformMargin(ctx context.Context, adminID string, enabled bool, margin entity.FeeConfig) error {
+func (u *adminUsecase) UpdatePlatformMargin(ctx context.Context, adminID, reason string, enabled bool, margin entity.FeeConfig) error {
+	admin, err := u.adminRepo.FindByID(ctx, adminID)
+	if err != nil {
+		return err
+	}
 	m, err := u.feeRepo.GetMargin(ctx)
 	if err != nil {
 		return err
 	}
+	old := map[string]any{"enabled": m.Enabled, "va": m.VA, "qris": m.QRIS, "disbursement": m.Disbursement}
 	m.Enabled = enabled
 	m.VA = margin.VA
 	m.QRIS = margin.QRIS
 	m.Disbursement = margin.Disbursement
 	m.UpdatedBy = adminID
-	return u.feeRepo.UpdateMargin(ctx, m)
+	if err := u.feeRepo.UpdateMargin(ctx, m); err != nil {
+		return err
+	}
+	return u.feeRepo.WriteAuditLog(ctx, &entity.FeeAuditLog{
+		EntityType: entity.FeeAuditEntityPlatformMargin,
+		EntityID:   "singleton",
+		AdminID:    adminID,
+		AdminEmail: admin.Email,
+		OldValue:   old,
+		NewValue:   map[string]any{"enabled": enabled, "va": margin.VA, "qris": margin.QRIS, "disbursement": margin.Disbursement},
+		Reason:     reason,
+	})
+}
+
+func (u *adminUsecase) CreateHoliday(ctx context.Context, adminID string, h *entity.FeeHoliday) error {
+	h.CreatedBy = adminID
+	h.UpdatedBy = adminID
+	if err := u.feeRepo.CreateHoliday(ctx, h); err != nil {
+		return err
+	}
+	return u.feeRepo.WriteAuditLog(ctx, &entity.FeeAuditLog{
+		EntityType: entity.FeeAuditEntityHolidaySurcharge,
+		EntityID:   h.ID,
+		AdminID:    adminID,
+		AdminEmail: "",
+		NewValue:   map[string]any{"name": h.Name, "date": h.Date, "surcharge": h.Surcharge},
+		Reason:     "holiday created",
+	})
+}
+
+func (u *adminUsecase) UpdateHoliday(ctx context.Context, adminID string, h *entity.FeeHoliday) error {
+	h.UpdatedBy = adminID
+	if err := u.feeRepo.UpdateHoliday(ctx, h); err != nil {
+		return err
+	}
+	return u.feeRepo.WriteAuditLog(ctx, &entity.FeeAuditLog{
+		EntityType: entity.FeeAuditEntityHolidaySurcharge,
+		EntityID:   h.ID,
+		AdminID:    adminID,
+		AdminEmail: "",
+		NewValue:   map[string]any{"name": h.Name, "date": h.Date, "is_active": h.IsActive, "surcharge": h.Surcharge},
+		Reason:     "holiday updated",
+	})
+}
+
+func (u *adminUsecase) ListHolidays(ctx context.Context, page, limit int) ([]*entity.FeeHoliday, int64, error) {
+	return u.feeRepo.ListHolidays(ctx, page, limit)
 }

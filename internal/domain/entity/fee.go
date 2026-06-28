@@ -27,3 +27,46 @@ type PlatformMargin struct {
 	UpdatedAt    time.Time
 	CreatedAt    time.Time
 }
+
+type HolidayType string
+
+const (
+	HolidayTypeNational HolidayType = "national" // Lebaran, Natal, etc.
+	HolidayTypeCustom   HolidayType = "custom"   // admin-defined special days
+)
+
+// FeeHoliday defines a surcharge added on top of the normal fee for a specific date.
+// Surcharge is additive, not a replacement.
+type FeeHoliday struct {
+	ID        string
+	Name      string      // e.g. "Idul Fitri 1446H"
+	Date      time.Time   // DATE only (no time component)
+	Type      HolidayType
+	Surcharge MethodFee   // additional fee for ALL methods on this date
+	IsActive  bool
+	CreatedBy string // admin_id
+	UpdatedBy string // admin_id
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// FeeAuditLog records every fee change — who changed what, when, and why.
+// Records are append-only; never updated or deleted.
+type FeeAuditLog struct {
+	ID         string
+	EntityType string         // "global_default" | "merchant_fee" | "platform_margin" | "holiday_surcharge"
+	EntityID   string         // merchant_id, holiday_id, or "singleton"
+	AdminID    string
+	AdminEmail string         // denormalized for readability without a join
+	OldValue   map[string]any // nil for first-time creation
+	NewValue   map[string]any
+	Reason     string
+	CreatedAt  time.Time
+}
+
+const (
+	FeeAuditEntityGlobalDefault   = "global_default"
+	FeeAuditEntityMerchantFee     = "merchant_fee"
+	FeeAuditEntityPlatformMargin  = "platform_margin"
+	FeeAuditEntityHolidaySurcharge = "holiday_surcharge"
+)

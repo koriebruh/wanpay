@@ -113,6 +113,23 @@ func (a *App) Run() error {
 	feeRepo := postgres.NewFeeRepo(db)
 	feeResolver := impl.NewFeeResolver(feeRepo)
 
+	// T-FEE-08: Seed platform margin from config on first boot.
+	// Applies only when updated_by is empty (migration default = never manually changed by admin).
+	seedCtx := context.Background()
+	if m, err := feeRepo.GetMargin(seedCtx); err == nil && m.UpdatedBy == "" {
+		cfgMargin := cfg.Fee.Margin
+		m.Enabled = cfgMargin.Enabled
+		m.VA = marginToMethodFee(cfgMargin.VA)
+		m.QRIS = marginToMethodFee(cfgMargin.QRIS)
+		m.Disbursement = marginToMethodFee(cfgMargin.Disbursement)
+		m.UpdatedBy = "system:boot_seed"
+		if seedErr := feeRepo.UpdateMargin(seedCtx, m); seedErr != nil {
+			log.Warn("fee margin boot seed failed", zap.Error(seedErr))
+		} else {
+			log.Info("platform margin seeded from config")
+		}
+	}
+
 	// Payment gateways
 	cbCfg := cfg.Provider.CircuitBreaker
 	payGWs := make(map[entity.Provider]gateway.PaymentGateway)
@@ -360,4 +377,12 @@ func (a *App) shutdown() error {
 
 	// Stage 5: Close infra in reverse-registration order (Echo → Redis → Postgres → Tracer).
 	return a.injector.Shutdown()
+}
+
+func marginToMethodFee(m config.MethodMargin) entity.MethodFee {
+	return entity.MethodFee{
+		Type:       entity.FeeType(m.Type),
+		Amount:     m.FlatIDR,
+		Percentage: m.Percentage,
+	}
 }

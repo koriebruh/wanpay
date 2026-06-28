@@ -6,6 +6,7 @@ package gen
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -14,6 +15,7 @@ type Querier interface {
 	CountAdmins(ctx context.Context) (int64, error)
 	CountBankAccounts(ctx context.Context, merchantID string) (int64, error)
 	CountDisbursementsByMerchant(ctx context.Context, merchantID string) (int64, error)
+	CountFeeHolidays(ctx context.Context) (int64, error)
 	CountMutationsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	CountOutboxByMerchant(ctx context.Context, merchantID uuid.NullUUID) (int64, error)
 	CountPaymentsByMerchant(ctx context.Context, merchantID string) (int64, error)
@@ -24,6 +26,8 @@ type Querier interface {
 	GetDisbursementByExternalID(ctx context.Context, arg GetDisbursementByExternalIDParams) (Disbursement, error)
 	GetDisbursementByID(ctx context.Context, id string) (Disbursement, error)
 	GetFeeDefault(ctx context.Context) (FeeDefault, error)
+	GetFeeHolidayByDate(ctx context.Context, date time.Time) (FeeHoliday, error)
+	GetFeeHolidayByID(ctx context.Context, id string) (FeeHoliday, error)
 	GetMerchantBalance(ctx context.Context, merchantID string) (int64, error)
 	GetMerchantByAPIKey(ctx context.Context, apiKey string) (Merchant, error)
 	GetMerchantByEmail(ctx context.Context, email string) (Merchant, error)
@@ -38,6 +42,8 @@ type Querier interface {
 	InsertAdmin(ctx context.Context, arg InsertAdminParams) (Admin, error)
 	InsertBankAccount(ctx context.Context, arg InsertBankAccountParams) (MerchantBankAccount, error)
 	InsertDisbursement(ctx context.Context, arg InsertDisbursementParams) (Disbursement, error)
+	InsertFeeAuditLog(ctx context.Context, arg InsertFeeAuditLogParams) error
+	InsertFeeHoliday(ctx context.Context, arg InsertFeeHolidayParams) (FeeHoliday, error)
 	InsertMerchant(ctx context.Context, arg InsertMerchantParams) (Merchant, error)
 	InsertMutation(ctx context.Context, arg InsertMutationParams) (Mutation, error)
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (Outbox, error)
@@ -47,6 +53,8 @@ type Querier interface {
 	ListAdmins(ctx context.Context, arg ListAdminsParams) ([]Admin, error)
 	ListBankAccountsByMerchant(ctx context.Context, merchantID string) ([]MerchantBankAccount, error)
 	ListDisbursementsByMerchant(ctx context.Context, arg ListDisbursementsByMerchantParams) ([]Disbursement, error)
+	ListFeeAuditLogs(ctx context.Context, arg ListFeeAuditLogsParams) ([]FeeAuditLog, error)
+	ListFeeHolidays(ctx context.Context, arg ListFeeHolidaysParams) ([]FeeHoliday, error)
 	ListMutationsByMerchant(ctx context.Context, arg ListMutationsByMerchantParams) ([]Mutation, error)
 	ListOutboxByMerchant(ctx context.Context, arg ListOutboxByMerchantParams) ([]Outbox, error)
 	ListPaymentAuditsByPaymentID(ctx context.Context, paymentID string) ([]PaymentAudit, error)
@@ -68,6 +76,7 @@ type Querier interface {
 	UpdateBankAccount(ctx context.Context, arg UpdateBankAccountParams) (MerchantBankAccount, error)
 	UpdateDisbursementStatus(ctx context.Context, arg UpdateDisbursementStatusParams) (Disbursement, error)
 	UpdateFeeDefault(ctx context.Context, arg UpdateFeeDefaultParams) (FeeDefault, error)
+	UpdateFeeHoliday(ctx context.Context, arg UpdateFeeHolidayParams) (FeeHoliday, error)
 	UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) (Merchant, error)
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) (Payment, error)
 	UpdatePlatformMargin(ctx context.Context, arg UpdatePlatformMarginParams) (PlatformMargin, error)

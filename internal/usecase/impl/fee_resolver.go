@@ -3,6 +3,7 @@ package impl
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"wanpey/core/internal/domain/entity"
 	"wanpey/core/internal/domain/repository"
@@ -10,10 +11,12 @@ import (
 
 // FeeResolution is the result of resolving fees from all layers for one transaction.
 type FeeResolution struct {
-	BaseFee        int64  // from merchant contract or global default
-	PlatformMargin int64  // Wanpey's margin on top
-	TotalFee       int64  // BaseFee + PlatformMargin
-	Source         string // "merchant_contract" | "global_default"
+	BaseFee          int64  // from merchant contract or global default
+	PlatformMargin   int64  // Wanpey's margin on top
+	HolidaySurcharge int64  // 0 if not a holiday
+	TotalFee         int64  // BaseFee + PlatformMargin + HolidaySurcharge
+	Source           string // "merchant_contract" | "global_default"
+	HolidayName      string // name of the holiday if applicable
 }
 
 // FeeResolver composes merchant fee, global default, and platform margin into one total.
@@ -27,12 +30,22 @@ func NewFeeResolver(feeRepo repository.FeeRepository) *FeeResolver {
 
 // Resolve returns the effective fee for a payment transaction.
 // Priority: merchant custom FeeConfig > global FeeDefault.
-// Platform margin is always added on top when enabled.
+// Platform margin + holiday surcharge added on top when applicable.
 func (r *FeeResolver) Resolve(
 	ctx context.Context,
 	merchant *entity.Merchant,
 	method entity.PaymentMethod,
 	amount int64,
+) (FeeResolution, error) {
+	return r.resolve(ctx, merchant, method, amount, time.Now())
+}
+
+func (r *FeeResolver) resolve(
+	ctx context.Context,
+	merchant *entity.Merchant,
+	method entity.PaymentMethod,
+	amount int64,
+	now time.Time,
 ) (FeeResolution, error) {
 	merchantFee, source, err := r.merchantFee(ctx, merchant, method)
 	if err != nil {
@@ -51,11 +64,21 @@ func (r *FeeResolver) Resolve(
 		platformFee = computeMethodFee(r.marginFee(margin, method), amount)
 	}
 
+	var holidayFee int64
+	var holidayName string
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	if h, err := r.feeRepo.GetHolidayByDate(ctx, today); err == nil && h.IsActive {
+		holidayFee = computeMethodFee(h.Surcharge, amount)
+		holidayName = h.Name
+	}
+
 	return FeeResolution{
-		BaseFee:        baseFee,
-		PlatformMargin: platformFee,
-		TotalFee:       baseFee + platformFee,
-		Source:         source,
+		BaseFee:          baseFee,
+		PlatformMargin:   platformFee,
+		HolidaySurcharge: holidayFee,
+		TotalFee:         baseFee + platformFee + holidayFee,
+		Source:           source,
+		HolidayName:      holidayName,
 	}, nil
 }
 
@@ -91,11 +114,22 @@ func (r *FeeResolver) ResolveDisbursement(
 		platformFee = computeMethodFee(margin.Disbursement, amount)
 	}
 
+	var holidayFee int64
+	var holidayName string
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	if h, err := r.feeRepo.GetHolidayByDate(ctx, today); err == nil && h.IsActive {
+		holidayFee = computeMethodFee(h.Surcharge, amount)
+		holidayName = h.Name
+	}
+
 	return FeeResolution{
-		BaseFee:        baseFee,
-		PlatformMargin: platformFee,
-		TotalFee:       baseFee + platformFee,
-		Source:         source,
+		BaseFee:          baseFee,
+		PlatformMargin:   platformFee,
+		HolidaySurcharge: holidayFee,
+		TotalFee:         baseFee + platformFee + holidayFee,
+		Source:           source,
+		HolidayName:      holidayName,
 	}, nil
 }
 

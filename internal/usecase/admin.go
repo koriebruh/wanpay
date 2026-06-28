@@ -36,6 +36,7 @@ type AdminOutput struct {
 
 type SetMerchantFeeInput struct {
 	MerchantID string           `json:"-"`
+	AdminID    string           `json:"-"`
 	FeeConfig  entity.FeeConfig `json:"fee_config"`
 	Reason     string           `json:"reason" validate:"required,min=10"`
 }
@@ -124,7 +125,12 @@ type AdminUsecase interface {
 
 	// Fee management
 	GetFeeDefault(ctx context.Context) (*entity.FeeDefault, error)
-	UpdateFeeDefault(ctx context.Context, adminID string, fee entity.FeeConfig) error
+	UpdateFeeDefault(ctx context.Context, adminID, reason string, fee entity.FeeConfig) error
 	GetPlatformMargin(ctx context.Context) (*entity.PlatformMargin, error)
-	UpdatePlatformMargin(ctx context.Context, adminID string, enabled bool, margin entity.FeeConfig) error
+	UpdatePlatformMargin(ctx context.Context, adminID, reason string, enabled bool, margin entity.FeeConfig) error
+
+	// Holiday surcharge
+	CreateHoliday(ctx context.Context, adminID string, h *entity.FeeHoliday) error
+	UpdateHoliday(ctx context.Context, adminID string, h *entity.FeeHoliday) error
+	ListHolidays(ctx context.Context, page, limit int) ([]*entity.FeeHoliday, int64, error)
 }

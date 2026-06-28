@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type Admin struct {
@@ -43,6 +44,18 @@ type Disbursement struct {
 	UpdatedAt     time.Time    `json:"updated_at"`
 }
 
+type FeeAuditLog struct {
+	ID         string                `json:"id"`
+	EntityType string                `json:"entity_type"`
+	EntityID   string                `json:"entity_id"`
+	AdminID    string                `json:"admin_id"`
+	AdminEmail string                `json:"admin_email"`
+	OldValue   pqtype.NullRawMessage `json:"old_value"`
+	NewValue   json.RawMessage       `json:"new_value"`
+	Reason     string                `json:"reason"`
+	CreatedAt  time.Time             `json:"created_at"`
+}
+
 type FeeDefault struct {
 	ID           string          `json:"id"`
 	Va           json.RawMessage `json:"va"`
@@ -51,6 +64,19 @@ type FeeDefault struct {
 	UpdatedBy    string          `json:"updated_by"`
 	UpdatedAt    time.Time       `json:"updated_at"`
 	CreatedAt    time.Time       `json:"created_at"`
+}
+
+type FeeHoliday struct {
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	Date      time.Time       `json:"date"`
+	Type      string          `json:"type"`
+	Surcharge json.RawMessage `json:"surcharge"`
+	IsActive  bool            `json:"is_active"`
+	CreatedBy string          `json:"created_by"`
+	UpdatedBy string          `json:"updated_by"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
 }
 
 type Merchant struct {

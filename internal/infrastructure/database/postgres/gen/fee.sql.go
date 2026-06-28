@@ -8,7 +8,21 @@ package gen
 import (
 	"context"
 	"encoding/json"
+	"time"
+
+	"github.com/sqlc-dev/pqtype"
 )
+
+const countFeeHolidays = `-- name: CountFeeHolidays :one
+SELECT COUNT(*) FROM fee_holidays
+`
+
+func (q *Queries) CountFeeHolidays(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countFeeHolidays)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const getFeeDefault = `-- name: GetFeeDefault :one
 SELECT id, va, qris, disbursement, updated_by, updated_at, created_at FROM fee_defaults LIMIT 1
@@ -25,6 +39,50 @@ func (q *Queries) GetFeeDefault(ctx context.Context) (FeeDefault, error) {
 		&i.UpdatedBy,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getFeeHolidayByDate = `-- name: GetFeeHolidayByDate :one
+SELECT id, name, date, type, surcharge, is_active, created_by, updated_by, created_at, updated_at FROM fee_holidays WHERE date = $1 AND is_active = TRUE
+`
+
+func (q *Queries) GetFeeHolidayByDate(ctx context.Context, date time.Time) (FeeHoliday, error) {
+	row := q.db.QueryRowContext(ctx, getFeeHolidayByDate, date)
+	var i FeeHoliday
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Date,
+		&i.Type,
+		&i.Surcharge,
+		&i.IsActive,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getFeeHolidayByID = `-- name: GetFeeHolidayByID :one
+SELECT id, name, date, type, surcharge, is_active, created_by, updated_by, created_at, updated_at FROM fee_holidays WHERE id = $1
+`
+
+func (q *Queries) GetFeeHolidayByID(ctx context.Context, id string) (FeeHoliday, error) {
+	row := q.db.QueryRowContext(ctx, getFeeHolidayByID, id)
+	var i FeeHoliday
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Date,
+		&i.Type,
+		&i.Surcharge,
+		&i.IsActive,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -47,6 +105,171 @@ func (q *Queries) GetPlatformMargin(ctx context.Context) (PlatformMargin, error)
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const insertFeeAuditLog = `-- name: InsertFeeAuditLog :exec
+INSERT INTO fee_audit_logs (entity_type, entity_id, admin_id, admin_email, old_value, new_value, reason)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type InsertFeeAuditLogParams struct {
+	EntityType string                `json:"entity_type"`
+	EntityID   string                `json:"entity_id"`
+	AdminID    string                `json:"admin_id"`
+	AdminEmail string                `json:"admin_email"`
+	OldValue   pqtype.NullRawMessage `json:"old_value"`
+	NewValue   json.RawMessage       `json:"new_value"`
+	Reason     string                `json:"reason"`
+}
+
+func (q *Queries) InsertFeeAuditLog(ctx context.Context, arg InsertFeeAuditLogParams) error {
+	_, err := q.db.ExecContext(ctx, insertFeeAuditLog,
+		arg.EntityType,
+		arg.EntityID,
+		arg.AdminID,
+		arg.AdminEmail,
+		arg.OldValue,
+		arg.NewValue,
+		arg.Reason,
+	)
+	return err
+}
+
+const insertFeeHoliday = `-- name: InsertFeeHoliday :one
+INSERT INTO fee_holidays (name, date, type, surcharge, is_active, created_by, updated_by)
+VALUES ($1, $2, $3, $4, $5, $6, $6)
+RETURNING id, name, date, type, surcharge, is_active, created_by, updated_by, created_at, updated_at
+`
+
+type InsertFeeHolidayParams struct {
+	Name      string          `json:"name"`
+	Date      time.Time       `json:"date"`
+	Type      string          `json:"type"`
+	Surcharge json.RawMessage `json:"surcharge"`
+	IsActive  bool            `json:"is_active"`
+	CreatedBy string          `json:"created_by"`
+}
+
+func (q *Queries) InsertFeeHoliday(ctx context.Context, arg InsertFeeHolidayParams) (FeeHoliday, error) {
+	row := q.db.QueryRowContext(ctx, insertFeeHoliday,
+		arg.Name,
+		arg.Date,
+		arg.Type,
+		arg.Surcharge,
+		arg.IsActive,
+		arg.CreatedBy,
+	)
+	var i FeeHoliday
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Date,
+		&i.Type,
+		&i.Surcharge,
+		&i.IsActive,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listFeeAuditLogs = `-- name: ListFeeAuditLogs :many
+SELECT id, entity_type, entity_id, admin_id, admin_email, old_value, new_value, reason, created_at FROM fee_audit_logs
+WHERE entity_type = $1 AND entity_id = $2
+ORDER BY created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type ListFeeAuditLogsParams struct {
+	EntityType string `json:"entity_type"`
+	EntityID   string `json:"entity_id"`
+	Limit      int32  `json:"limit"`
+	Offset     int32  `json:"offset"`
+}
+
+func (q *Queries) ListFeeAuditLogs(ctx context.Context, arg ListFeeAuditLogsParams) ([]FeeAuditLog, error) {
+	rows, err := q.db.QueryContext(ctx, listFeeAuditLogs,
+		arg.EntityType,
+		arg.EntityID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FeeAuditLog{}
+	for rows.Next() {
+		var i FeeAuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntityType,
+			&i.EntityID,
+			&i.AdminID,
+			&i.AdminEmail,
+			&i.OldValue,
+			&i.NewValue,
+			&i.Reason,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFeeHolidays = `-- name: ListFeeHolidays :many
+SELECT id, name, date, type, surcharge, is_active, created_by, updated_by, created_at, updated_at FROM fee_holidays
+ORDER BY date DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListFeeHolidaysParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListFeeHolidays(ctx context.Context, arg ListFeeHolidaysParams) ([]FeeHoliday, error) {
+	rows, err := q.db.QueryContext(ctx, listFeeHolidays, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FeeHoliday{}
+	for rows.Next() {
+		var i FeeHoliday
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Date,
+			&i.Type,
+			&i.Surcharge,
+			&i.IsActive,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateFeeDefault = `-- name: UpdateFeeDefault :one
@@ -82,6 +305,55 @@ func (q *Queries) UpdateFeeDefault(ctx context.Context, arg UpdateFeeDefaultPara
 		&i.UpdatedBy,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateFeeHoliday = `-- name: UpdateFeeHoliday :one
+UPDATE fee_holidays
+SET name       = $2,
+    date       = $3,
+    type       = $4,
+    surcharge  = $5,
+    is_active  = $6,
+    updated_by = $7,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, name, date, type, surcharge, is_active, created_by, updated_by, created_at, updated_at
+`
+
+type UpdateFeeHolidayParams struct {
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	Date      time.Time       `json:"date"`
+	Type      string          `json:"type"`
+	Surcharge json.RawMessage `json:"surcharge"`
+	IsActive  bool            `json:"is_active"`
+	UpdatedBy string          `json:"updated_by"`
+}
+
+func (q *Queries) UpdateFeeHoliday(ctx context.Context, arg UpdateFeeHolidayParams) (FeeHoliday, error) {
+	row := q.db.QueryRowContext(ctx, updateFeeHoliday,
+		arg.ID,
+		arg.Name,
+		arg.Date,
+		arg.Type,
+		arg.Surcharge,
+		arg.IsActive,
+		arg.UpdatedBy,
+	)
+	var i FeeHoliday
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Date,
+		&i.Type,
+		&i.Surcharge,
+		&i.IsActive,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

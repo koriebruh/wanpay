@@ -173,6 +173,7 @@ func (h *AdminHandler) SetMerchantFee(c echo.Context) error {
 		return err
 	}
 	input.MerchantID = c.Param("id")
+	input.AdminID = c.Get(middleware.ContextKeyAdminID).(string)
 	if err := h.uc.UpdateMerchantFee(c.Request().Context(), input); err != nil {
 		return err
 	}
@@ -443,7 +444,7 @@ func (h *AdminHandler) UpdateFeeDefault(c echo.Context) error {
 	if err := c.Validate(&body); err != nil {
 		return err
 	}
-	if err := h.uc.UpdateFeeDefault(c.Request().Context(), adminID, body.FeeConfig); err != nil {
+	if err := h.uc.UpdateFeeDefault(c.Request().Context(), adminID, body.Reason, body.FeeConfig); err != nil {
 		return err
 	}
 	return response.OK(c, map[string]string{"message": "fee default updated"})
@@ -470,8 +471,60 @@ func (h *AdminHandler) UpdatePlatformMargin(c echo.Context) error {
 	if err := c.Validate(&body); err != nil {
 		return err
 	}
-	if err := h.uc.UpdatePlatformMargin(c.Request().Context(), adminID, body.Enabled, body.Margin); err != nil {
+	if err := h.uc.UpdatePlatformMargin(c.Request().Context(), adminID, body.Reason, body.Enabled, body.Margin); err != nil {
 		return err
 	}
 	return response.OK(c, map[string]string{"message": "platform margin updated"})
+}
+
+// ── Holiday surcharge ─────────────────────────────────────────────────────────
+
+func (h *AdminHandler) ListHolidays(c echo.Context) error {
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	items, total, err := h.uc.ListHolidays(c.Request().Context(), page, limit)
+	if err != nil {
+		return err
+	}
+	totalPages := int(total) / limit
+	if int(total)%limit != 0 {
+		totalPages++
+	}
+	return response.List(c, items, response.Pagination{
+		Page:       page,
+		PerPage:    limit,
+		Total:      int(total),
+		TotalPages: totalPages,
+	})
+}
+
+func (h *AdminHandler) CreateHoliday(c echo.Context) error {
+	adminID := c.Get(middleware.ContextKeyAdminID).(string)
+	var holiday entity.FeeHoliday
+	if err := c.Bind(&holiday); err != nil {
+		return err
+	}
+	if err := h.uc.CreateHoliday(c.Request().Context(), adminID, &holiday); err != nil {
+		return err
+	}
+	return response.OK(c, holiday)
+}
+
+func (h *AdminHandler) UpdateHoliday(c echo.Context) error {
+	adminID := c.Get(middleware.ContextKeyAdminID).(string)
+	var holiday entity.FeeHoliday
+	if err := c.Bind(&holiday); err != nil {
+		return err
+	}
+	holiday.ID = c.Param("id")
+	if err := h.uc.UpdateHoliday(c.Request().Context(), adminID, &holiday); err != nil {
+		return err
+	}
+	return response.OK(c, holiday)
 }

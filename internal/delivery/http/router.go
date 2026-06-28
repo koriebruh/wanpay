@@ -161,4 +161,9 @@ func registerAdminRoutes(e *echo.Echo, r Routes) {
 	feeAdmin.GET("/margin", r.Admin.GetPlatformMargin)
 	feeAdmin.PUT("/margin", r.Admin.UpdatePlatformMargin,
 		httpmw.RequireRole(entity.AdminRoleSuperAdmin))
+	feeAdmin.GET("/holidays", r.Admin.ListHolidays)
+	feeAdmin.POST("/holidays", r.Admin.CreateHoliday,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
+	feeAdmin.PUT("/holidays/:id", r.Admin.UpdateHoliday,
+		httpmw.RequireRole(entity.AdminRoleSuperAdmin, entity.AdminRoleFinance))
 }
