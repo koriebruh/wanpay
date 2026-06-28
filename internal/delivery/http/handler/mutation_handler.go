@@ -20,6 +20,21 @@ func NewMutationHandler(uc usecase.MutationUsecase) *MutationHandler {
 	return &MutationHandler{uc: uc}
 }
 
+// ListMutations godoc
+//
+//	@Summary      List ledger mutations
+//	@Description  Returns paginated ledger mutations (credits and debits) for the authenticated merchant.
+//	@Tags         Mutations (Ledger)
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Param        page        query     int     false  "Page number (default: 1)"
+//	@Param        limit       query     int     false  "Items per page (default: 20, max: 100)"
+//	@Param        type        query     string  false  "Filter by type: credit, debit"
+//	@Param        start_date  query     string  false  "Start date (RFC3339)"
+//	@Param        end_date    query     string  false  "End date (RFC3339)"
+//	@Success      200         {object}  response.ListResponse{data=[]usecase.MutationOutput}
+//	@Failure      401         {object}  response.ErrorResponse
+//	@Router       /v1/mutations [get]
 func (h *MutationHandler) ListMutations(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 
@@ -71,6 +86,16 @@ func (h *MutationHandler) ListMutations(c echo.Context) error {
 	})
 }
 
+// GetBalance godoc
+//
+//	@Summary      Get current balance
+//	@Description  Returns the merchant's current spendable balance in IDR (calculated live from ledger).
+//	@Tags         Mutations (Ledger)
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Success      200  {object}  response.SuccessResponse{data=object{balance=integer}}
+//	@Failure      401  {object}  response.ErrorResponse
+//	@Router       /v1/mutations/balance [get]
 func (h *MutationHandler) GetBalance(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 
@@ -81,6 +106,18 @@ func (h *MutationHandler) GetBalance(c echo.Context) error {
 	return response.OK(c, map[string]int64{"balance": balance})
 }
 
+// GetMutation godoc
+//
+//	@Summary      Get mutation detail
+//	@Description  Returns a single ledger mutation by ID.
+//	@Tags         Mutations (Ledger)
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Param        id   path      string  true  "Mutation ID (UUID)"
+//	@Success      200  {object}  response.SuccessResponse{data=usecase.MutationOutput}
+//	@Failure      401  {object}  response.ErrorResponse
+//	@Failure      404  {object}  response.ErrorResponse
+//	@Router       /v1/mutations/{id} [get]
 func (h *MutationHandler) GetMutation(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 	mutationID := c.Param("id")

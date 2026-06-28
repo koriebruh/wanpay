@@ -38,6 +38,27 @@ type envelope struct {
 	Meta    Meta       `json:"meta"`
 }
 
+// SuccessResponse is the exported shape used by Swagger annotations.
+type SuccessResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Data    any    `json:"data"`
+	Meta    Meta   `json:"meta"`
+}
+
+// ErrorResponse is the exported shape used by Swagger annotations.
+type ErrorResponse struct {
+	Success bool       `json:"success" example:"false"`
+	Error   *ErrorBody `json:"error"`
+	Meta    Meta       `json:"meta"`
+}
+
+// ListResponse is the exported shape for paginated list endpoints.
+type ListResponse struct {
+	Success bool       `json:"success" example:"true"`
+	Data    any        `json:"data"`
+	Meta    Meta       `json:"meta"`
+}
+
 func meta(c echo.Context) Meta {
 	m := Meta{Timestamp: time.Now().UTC().Format(time.RFC3339Nano)}
 	if span := trace.SpanFromContext(c.Request().Context()); span.SpanContext().IsValid() {

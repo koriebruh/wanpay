@@ -36,6 +36,16 @@ func (h *MerchantHandler) Create(c echo.Context) error {
 	return response.Created(c, out)
 }
 
+// GetMerchant godoc
+//
+//	@Summary      Get merchant profile
+//	@Description  Returns the authenticated merchant's profile, status, and configuration.
+//	@Tags         Merchant
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Success      200  {object}  response.SuccessResponse{data=usecase.MerchantOutput}
+//	@Failure      401  {object}  response.ErrorResponse
+//	@Router       /v1/merchants/me [get]
 func (h *MerchantHandler) GetMerchant(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 
@@ -46,6 +56,19 @@ func (h *MerchantHandler) GetMerchant(c echo.Context) error {
 	return response.OK(c, out)
 }
 
+// Update godoc
+//
+//	@Summary      Update merchant profile
+//	@Description  Updates merchant name, webhook URL, or other profile fields. FeeConfig cannot be changed here — contact admin.
+//	@Tags         Merchant
+//	@Accept       json
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Param        body  body      usecase.UpdateMerchantInput  true  "Fields to update"
+//	@Success      200   {object}  response.SuccessResponse{data=usecase.MerchantOutput}
+//	@Failure      400   {object}  response.ErrorResponse
+//	@Failure      401   {object}  response.ErrorResponse
+//	@Router       /v1/merchants/me [patch]
 func (h *MerchantHandler) Update(c echo.Context) error {
 	var input usecase.UpdateMerchantInput
 	if err := c.Bind(&input); err != nil {
@@ -63,6 +86,16 @@ func (h *MerchantHandler) Update(c echo.Context) error {
 	return response.OK(c, out)
 }
 
+// RegenerateAPIKey godoc
+//
+//	@Summary      Regenerate API key
+//	@Description  Generates a new API key and immediately invalidates the old one. The raw key is shown only once — store it securely.
+//	@Tags         Merchant
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Success      200  {object}  response.SuccessResponse{data=object{api_key=string}}
+//	@Failure      401  {object}  response.ErrorResponse
+//	@Router       /v1/merchants/me/api-key/regenerate [post]
 func (h *MerchantHandler) RegenerateAPIKey(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 
@@ -73,6 +106,16 @@ func (h *MerchantHandler) RegenerateAPIKey(c echo.Context) error {
 	return response.OK(c, map[string]string{"api_key": rawKey})
 }
 
+// ListBankAccounts godoc
+//
+//	@Summary      List bank accounts
+//	@Description  Returns all registered bank accounts for the authenticated merchant (max 3).
+//	@Tags         Merchant / Bank Accounts
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Success      200  {object}  response.SuccessResponse{data=[]usecase.BankAccountOutput}
+//	@Failure      401  {object}  response.ErrorResponse
+//	@Router       /v1/merchants/me/bank-accounts [get]
 func (h *MerchantHandler) ListBankAccounts(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 
@@ -83,6 +126,20 @@ func (h *MerchantHandler) ListBankAccounts(c echo.Context) error {
 	return response.OK(c, out)
 }
 
+// AddBankAccount godoc
+//
+//	@Summary      Add bank account
+//	@Description  Registers a new bank account for disbursement. Max 3 accounts per merchant. New accounts must be verified by admin before they can receive disbursements.
+//	@Tags         Merchant / Bank Accounts
+//	@Accept       json
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Param        body  body      usecase.AddBankAccountInput  true  "Bank account details"
+//	@Success      201   {object}  response.SuccessResponse{data=usecase.BankAccountOutput}
+//	@Failure      400   {object}  response.ErrorResponse
+//	@Failure      401   {object}  response.ErrorResponse
+//	@Failure      422   {object}  response.ErrorResponse  "Maximum 3 bank accounts reached"
+//	@Router       /v1/merchants/me/bank-accounts [post]
 func (h *MerchantHandler) AddBankAccount(c echo.Context) error {
 	var input usecase.AddBankAccountInput
 	if err := c.Bind(&input); err != nil {
@@ -100,6 +157,18 @@ func (h *MerchantHandler) AddBankAccount(c echo.Context) error {
 	return response.Created(c, out)
 }
 
+// RemoveBankAccount godoc
+//
+//	@Summary      Remove bank account
+//	@Description  Removes a registered bank account. Cannot remove the primary account if other accounts exist.
+//	@Tags         Merchant / Bank Accounts
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Param        id   path  string  true  "Bank account ID (UUID)"
+//	@Success      204  "Bank account removed"
+//	@Failure      401  {object}  response.ErrorResponse
+//	@Failure      404  {object}  response.ErrorResponse
+//	@Router       /v1/merchants/me/bank-accounts/{id} [delete]
 func (h *MerchantHandler) RemoveBankAccount(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 	accountID := c.Param("id")
@@ -110,6 +179,18 @@ func (h *MerchantHandler) RemoveBankAccount(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// SetPrimaryBankAccount godoc
+//
+//	@Summary      Set primary bank account
+//	@Description  Marks a bank account as the primary account for disbursements.
+//	@Tags         Merchant / Bank Accounts
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Param        id   path      string  true  "Bank account ID (UUID)"
+//	@Success      200  {object}  response.SuccessResponse{data=object{message=string}}
+//	@Failure      401  {object}  response.ErrorResponse
+//	@Failure      404  {object}  response.ErrorResponse
+//	@Router       /v1/merchants/me/bank-accounts/{id}/primary [patch]
 func (h *MerchantHandler) SetPrimaryBankAccount(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 	accountID := c.Param("id")
@@ -120,6 +201,18 @@ func (h *MerchantHandler) SetPrimaryBankAccount(c echo.Context) error {
 	return response.OK(c, map[string]string{"message": "primary bank account updated"})
 }
 
+// ListWebhookEvents godoc
+//
+//	@Summary      List webhook delivery events
+//	@Description  Returns outbound webhook delivery history for this merchant — useful for debugging failed deliveries.
+//	@Tags         Merchant
+//	@Produce      json
+//	@Security     ApiKeyAuth
+//	@Param        page   query     int  false  "Page number (default: 1)"
+//	@Param        limit  query     int  false  "Items per page (default: 20, max: 100)"
+//	@Success      200    {object}  response.ListResponse{data=[]usecase.WebhookEventOutput}
+//	@Failure      401    {object}  response.ErrorResponse
+//	@Router       /v1/merchants/me/webhook-events [get]
 func (h *MerchantHandler) ListWebhookEvents(c echo.Context) error {
 	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
 	page, _ := strconv.Atoi(c.QueryParam("page"))

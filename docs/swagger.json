@@ -1,0 +1,4534 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Payment gateway aggregator — VA, QRIS, and disbursement via Midtrans, Xendit, DOKU, iPaymu.\n\n## Authentication\nMerchant endpoints (/v1/*): `X-API-Key` header with your API key (`wpay_live_*` or `wpay_test_*`).\nAdmin endpoints (/admin/*): `Authorization: Bearer \u003caccess_token\u003e` from POST /admin/login.\n\n## Idempotency\nPayment and disbursement creation support `Idempotency-Key` header. Use unique key per request to safely retry.\n\n## Webhook\nWanpey signs outbound webhooks with `X-Wanpey-Signature` (HMAC-SHA256). Verify using your webhook secret.",
+        "title": "Wanpey Payment Gateway API",
+        "contact": {
+            "name": "Wanpey Support",
+            "email": "support@wanpey.id"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/admin/admins": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns all admin accounts. Roles: super_admin only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Management"
+                ],
+                "summary": "List admin users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.AdminOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Creates a new admin account. Roles: super_admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Management"
+                ],
+                "summary": "Create admin user",
+                "parameters": [
+                    {
+                        "description": "Admin details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.CreateAdminInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.AdminOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/admins/{id}/deactivate": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Deactivates an admin account. Cannot deactivate yourself. Roles: super_admin only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Management"
+                ],
+                "summary": "Deactivate admin user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Admin ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Cannot deactivate yourself",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/disbursements": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns paginated disbursements across all merchants. Roles: all admin roles.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Disbursements"
+                ],
+                "summary": "List all disbursements (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by merchant ID",
+                        "name": "merchant_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by provider",
+                        "name": "provider",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (RFC3339)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (RFC3339)",
+                        "name": "end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.DisbursementOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/disbursements/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns disbursement detail by ID across all merchants.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Disbursements"
+                ],
+                "summary": "Get disbursement detail (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disbursement ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.DisbursementOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/fees/default": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns the platform's global default fee applied when a merchant has no custom contract. Roles: super_admin, finance.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Fee Management"
+                ],
+                "summary": "Get global default fee",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeDefault"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Updates the platform's global default fee. Mandatory reason for audit trail. Roles: super_admin, finance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Fee Management"
+                ],
+                "summary": "Update global default fee",
+                "parameters": [
+                    {
+                        "description": "New fee config + reason (min 10 chars)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "fee_config": {
+                                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeConfig"
+                                },
+                                "reason": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/fees/holidays": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns all configured holiday surcharges. Roles: super_admin, finance.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Fee Management"
+                ],
+                "summary": "List holiday surcharges",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeHoliday"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Adds a fee surcharge for a specific date (e.g. public holiday). Roles: super_admin, finance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Fee Management"
+                ],
+                "summary": "Create holiday surcharge",
+                "parameters": [
+                    {
+                        "description": "Holiday config",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeHoliday"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeHoliday"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/fees/holidays/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Updates an existing holiday surcharge (can toggle active state). Roles: super_admin, finance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Fee Management"
+                ],
+                "summary": "Update holiday surcharge",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated holiday config",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeHoliday"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeHoliday"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/fees/margin": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns Wanpey's platform margin added on top of base fees. Roles: super_admin, finance.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Fee Management"
+                ],
+                "summary": "Get platform margin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.PlatformMargin"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Updates Wanpey's margin on top of all fees. Can be toggled on/off per method. Roles: super_admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Fee Management"
+                ],
+                "summary": "Update platform margin",
+                "parameters": [
+                    {
+                        "description": "Margin config + reason",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "enabled": {
+                                    "type": "boolean"
+                                },
+                                "margin": {
+                                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeConfig"
+                                },
+                                "reason": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/login": {
+            "post": {
+                "description": "Authenticates an admin and returns access + refresh tokens. Access token expires based on config (default 8h). Never distinguish wrong email vs wrong password in errors.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Auth"
+                ],
+                "summary": "Admin login",
+                "parameters": [
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.AdminLoginInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.AdminTokenOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/me": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns the authenticated admin's profile and role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Auth"
+                ],
+                "summary": "Get current admin profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.AdminOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/me/password": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Changes the authenticated admin's password. Requires current password for verification.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Auth"
+                ],
+                "summary": "Change admin password",
+                "parameters": [
+                    {
+                        "description": "Password change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "new_password": {
+                                    "type": "string"
+                                },
+                                "old_password": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns paginated list of all merchants. Roles: all admin roles.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "List all merchants",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter: pending, active, suspended, inactive",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name or email",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.MerchantOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Registers a new merchant. Returns API key once — store it securely. Roles: super_admin, ops.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Create merchant",
+                "parameters": [
+                    {
+                        "description": "Merchant details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.CreateMerchantInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.CreateMerchantOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns merchant detail by ID. Roles: all admin roles.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Get merchant detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.MerchantOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Soft-deletes a merchant. Data is retained for audit. Roles: super_admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Delete merchant (soft)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}/api-key/regenerate": {
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Generates a new API key for a merchant and invalidates the old one. Raw key shown once. Roles: super_admin, ops.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Regenerate merchant API key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "api_key": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}/approve": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Activates a pending merchant so they can start transacting. Roles: super_admin, ops.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Approve merchant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}/bank-accounts": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns all bank accounts for a merchant including verification status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "List merchant bank accounts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.BankAccountOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}/bank-accounts/{aid}/verify": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Marks a merchant's bank account as verified. Only verified accounts can receive disbursements. Roles: super_admin, ops.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Verify bank account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bank account ID",
+                        "name": "aid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}/cashout-limit": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Sets the maximum total disbursement amount per day in IDR. 0 = unlimited. Roles: super_admin, finance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Set daily cashout limit",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Daily limit in IDR",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "limit_idr": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}/deactivate": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Permanently deactivates a merchant. Roles: super_admin, ops.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Deactivate merchant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}/fee": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Sets custom VA, QRIS, and disbursement fees for a merchant. Reason is mandatory for audit trail. Roles: super_admin, finance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Set merchant fee config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fee config + reason",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.SetMerchantFeeInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/merchants/{id}/suspend": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Suspends an active merchant — blocks new transactions. Roles: super_admin, ops.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Merchants"
+                ],
+                "summary": "Suspend merchant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/mutations": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns paginated ledger mutations across all merchants. Roles: super_admin, finance.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Mutations"
+                ],
+                "summary": "List all mutations (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by merchant ID",
+                        "name": "merchant_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by type: credit, debit",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (RFC3339)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (RFC3339)",
+                        "name": "end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.MutationOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/payments": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns paginated payments across all merchants. Roles: all admin roles.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Payments"
+                ],
+                "summary": "List all payments (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by merchant ID",
+                        "name": "merchant_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by provider",
+                        "name": "provider",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (RFC3339)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (RFC3339)",
+                        "name": "end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.PaymentOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/payments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns payment detail by ID across all merchants.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Payments"
+                ],
+                "summary": "Get payment detail (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.PaymentOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/provider-balances": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns platform's known balance at each payment provider. Roles: super_admin, finance.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Treasury"
+                ],
+                "summary": "Get provider balances",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_domain_entity.ProviderBalance"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/provider-balances/{provider}": {
+            "patch": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Manually records the platform's balance at a specific provider (for reconciliation). Roles: super_admin, finance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Treasury"
+                ],
+                "summary": "Update provider balance",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider: midtrans, xendit, doku, ipaymu",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Balance in IDR",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "balance_idr": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/token/refresh": {
+            "post": {
+                "description": "Exchanges a valid refresh token for a new access + refresh token pair.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin / Auth"
+                ],
+                "summary": "Refresh access token",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "refresh_token": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.AdminTokenOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/disbursements": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns paginated list of disbursements for the authenticated merchant.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Disbursements"
+                ],
+                "summary": "List disbursements",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status: pending, processing, completed, failed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (RFC3339)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (RFC3339)",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.DisbursementOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Sends funds from merchant balance to a registered verified bank account. The bank account must be verified by admin before use. Daily cashout limit applies if configured.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Disbursements"
+                ],
+                "summary": "Create disbursement (cash out)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique key to prevent duplicate disbursements on retry",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Disbursement request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.DisburseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.DisbursementOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "402": {
+                        "description": "Insufficient balance",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Bank account not verified or daily limit exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/disbursements/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns full disbursement detail including status, bank account info, and fee breakdown.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Disbursements"
+                ],
+                "summary": "Get disbursement detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disbursement ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.DisbursementOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/merchants/me": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns the authenticated merchant's profile, status, and configuration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Merchant"
+                ],
+                "summary": "Get merchant profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.MerchantOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates merchant name, webhook URL, or other profile fields. FeeConfig cannot be changed here — contact admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Merchant"
+                ],
+                "summary": "Update merchant profile",
+                "parameters": [
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.UpdateMerchantInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.MerchantOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/merchants/me/api-key/regenerate": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Generates a new API key and immediately invalidates the old one. The raw key is shown only once — store it securely.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Merchant"
+                ],
+                "summary": "Regenerate API key",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "api_key": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/merchants/me/bank-accounts": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns all registered bank accounts for the authenticated merchant (max 3).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Merchant / Bank Accounts"
+                ],
+                "summary": "List bank accounts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.BankAccountOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Registers a new bank account for disbursement. Max 3 accounts per merchant. New accounts must be verified by admin before they can receive disbursements.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Merchant / Bank Accounts"
+                ],
+                "summary": "Add bank account",
+                "parameters": [
+                    {
+                        "description": "Bank account details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.AddBankAccountInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.BankAccountOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Maximum 3 bank accounts reached",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/merchants/me/bank-accounts/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Removes a registered bank account. Cannot remove the primary account if other accounts exist.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Merchant / Bank Accounts"
+                ],
+                "summary": "Remove bank account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bank account ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Bank account removed"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/merchants/me/bank-accounts/{id}/primary": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Marks a bank account as the primary account for disbursements.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Merchant / Bank Accounts"
+                ],
+                "summary": "Set primary bank account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bank account ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/merchants/me/webhook-events": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns outbound webhook delivery history for this merchant — useful for debugging failed deliveries.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Merchant"
+                ],
+                "summary": "List webhook delivery events",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.WebhookEventOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/mutations": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns paginated ledger mutations (credits and debits) for the authenticated merchant.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mutations (Ledger)"
+                ],
+                "summary": "List ledger mutations",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by type: credit, debit",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (RFC3339)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (RFC3339)",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.MutationOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/mutations/balance": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns the merchant's current spendable balance in IDR (calculated live from ledger).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mutations (Ledger)"
+                ],
+                "summary": "Get current balance",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "balance": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/mutations/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a single ledger mutation by ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mutations (Ledger)"
+                ],
+                "summary": "Get mutation detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Mutation ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.MutationOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payments": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns paginated list of payments for the authenticated merchant.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "List payments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status: pending, paid, expired, cancelled, failed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by provider: midtrans, xendit, doku, ipaymu",
+                        "name": "provider",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by method: va, qris",
+                        "name": "method",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (RFC3339)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (RFC3339)",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.ListResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/wanpey_core_internal_usecase.PaymentOutput"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payments/qris": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Creates a QRIS payment and returns a QR code string for the customer to scan.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Create QRIS payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique key to prevent duplicate payments on retry",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    },
+                    {
+                        "description": "QRIS payment request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.CreateQRISInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.PaymentOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payments/va": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Creates a VA payment via the specified provider. Returns VA number and bank details for the customer to pay.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Create Virtual Account payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique key to prevent duplicate payments on retry",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    },
+                    {
+                        "description": "VA payment request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_internal_usecase.CreateVAInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.PaymentOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns full payment detail including status, VA/QR data, and fee breakdown.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Get payment detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/wanpey_core_pkg_response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/wanpey_core_internal_usecase.PaymentOutput"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Cancels a pending payment. Uses a two-step process (pending → cancelling → cancelled) for financial safety. Only pending payments can be cancelled.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Cancel a payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Payment cancelled successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Payment is already in a final state",
+                        "schema": {
+                            "$ref": "#/definitions/wanpey_core_pkg_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "wanpey_core_internal_domain_entity.AdminRole": {
+            "type": "string",
+            "enum": [
+                "super_admin",
+                "ops",
+                "finance"
+            ],
+            "x-enum-varnames": [
+                "AdminRoleSuperAdmin",
+                "AdminRoleOps",
+                "AdminRoleFinance"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.BankCode": {
+            "type": "string",
+            "enum": [
+                "BCA",
+                "BNI",
+                "BRI",
+                "BSI",
+                "MANDIRI",
+                "PERMATA",
+                "CIMB"
+            ],
+            "x-enum-varnames": [
+                "BankBCA",
+                "BankBNI",
+                "BankBRI",
+                "BankBSI",
+                "BankMandiri",
+                "BankPermata",
+                "BankCIMB"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.Currency": {
+            "type": "string",
+            "enum": [
+                "IDR"
+            ],
+            "x-enum-varnames": [
+                "CurrencyIDR"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.DisbursementStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "processing",
+                "completed",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "DisbursementStatusPending",
+                "DisbursementStatusProcessing",
+                "DisbursementStatusCompleted",
+                "DisbursementStatusFailed"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.FeeConfig": {
+            "type": "object",
+            "properties": {
+                "disbursement": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                },
+                "qris": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                },
+                "va": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                }
+            }
+        },
+        "wanpey_core_internal_domain_entity.FeeDefault": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "disbursement": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "qris": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "description": "admin_id",
+                    "type": "string"
+                },
+                "va": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                }
+            }
+        },
+        "wanpey_core_internal_domain_entity.FeeHoliday": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "description": "admin_id",
+                    "type": "string"
+                },
+                "date": {
+                    "description": "DATE only (no time component)",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "e.g. \"Idul Fitri 1446H\"",
+                    "type": "string"
+                },
+                "surcharge": {
+                    "description": "additional fee for ALL methods on this date",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                        }
+                    ]
+                },
+                "type": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.HolidayType"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "description": "admin_id",
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_internal_domain_entity.FeeType": {
+            "type": "string",
+            "enum": [
+                "flat",
+                "percentage"
+            ],
+            "x-enum-comments": {
+                "FeeTypeFlat": "fixed IDR amount per transaction",
+                "FeeTypePercentage": "% of transaction amount"
+            },
+            "x-enum-descriptions": [
+                "fixed IDR amount per transaction",
+                "% of transaction amount"
+            ],
+            "x-enum-varnames": [
+                "FeeTypeFlat",
+                "FeeTypePercentage"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.HolidayType": {
+            "type": "string",
+            "enum": [
+                "national",
+                "custom"
+            ],
+            "x-enum-comments": {
+                "HolidayTypeCustom": "admin-defined special days",
+                "HolidayTypeNational": "Lebaran, Natal, etc."
+            },
+            "x-enum-descriptions": [
+                "Lebaran, Natal, etc.",
+                "admin-defined special days"
+            ],
+            "x-enum-varnames": [
+                "HolidayTypeNational",
+                "HolidayTypeCustom"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.MerchantStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "active",
+                "suspended",
+                "inactive"
+            ],
+            "x-enum-comments": {
+                "MerchantStatusInactive": "closed account",
+                "MerchantStatusPending": "awaiting KYC/approval",
+                "MerchantStatusSuspended": "temporarily blocked"
+            },
+            "x-enum-descriptions": [
+                "awaiting KYC/approval",
+                "",
+                "temporarily blocked",
+                "closed account"
+            ],
+            "x-enum-varnames": [
+                "MerchantStatusPending",
+                "MerchantStatusActive",
+                "MerchantStatusSuspended",
+                "MerchantStatusInactive"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.MethodFee": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "percentage": {
+                    "type": "number"
+                },
+                "type": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeType"
+                }
+            }
+        },
+        "wanpey_core_internal_domain_entity.MutationReferenceType": {
+            "type": "string",
+            "enum": [
+                "payment",
+                "disbursement"
+            ],
+            "x-enum-varnames": [
+                "MutationRefPayment",
+                "MutationRefDisbursement"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.MutationType": {
+            "type": "string",
+            "enum": [
+                "cash_in",
+                "cash_out"
+            ],
+            "x-enum-varnames": [
+                "MutationTypeCashIn",
+                "MutationTypeCashOut"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.PaymentMethod": {
+            "type": "string",
+            "enum": [
+                "va",
+                "qris",
+                "cc"
+            ],
+            "x-enum-comments": {
+                "PaymentMethodCC": "coming soon"
+            },
+            "x-enum-descriptions": [
+                "",
+                "",
+                "coming soon"
+            ],
+            "x-enum-varnames": [
+                "PaymentMethodVA",
+                "PaymentMethodQRIS",
+                "PaymentMethodCC"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.PaymentStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "cancelling",
+                "paid",
+                "expired",
+                "failed",
+                "cancelled"
+            ],
+            "x-enum-comments": {
+                "PaymentStatusCancelling": "transient: provider call in-flight"
+            },
+            "x-enum-descriptions": [
+                "",
+                "transient: provider call in-flight",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "x-enum-varnames": [
+                "PaymentStatusPending",
+                "PaymentStatusCancelling",
+                "PaymentStatusPaid",
+                "PaymentStatusExpired",
+                "PaymentStatusFailed",
+                "PaymentStatusCancelled"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.PlatformMargin": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "disbursement": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "qris": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "description": "admin_id",
+                    "type": "string"
+                },
+                "va": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MethodFee"
+                }
+            }
+        },
+        "wanpey_core_internal_domain_entity.Provider": {
+            "type": "string",
+            "enum": [
+                "midtrans",
+                "xendit",
+                "doku",
+                "ipaymu"
+            ],
+            "x-enum-varnames": [
+                "ProviderMidtrans",
+                "ProviderXendit",
+                "ProviderDoku",
+                "ProviderIPaymu"
+            ]
+        },
+        "wanpey_core_internal_domain_entity.ProviderBalance": {
+            "type": "object",
+            "properties": {
+                "balanceIDR": {
+                    "description": "last known balance; updated after settlement or manual reconciliation",
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lastReconciledAt": {
+                    "description": "nil = never reconciled",
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "provider": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.Provider"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.AddBankAccountInput": {
+            "type": "object",
+            "required": [
+                "account_name",
+                "account_number",
+                "bank_code"
+            ],
+            "properties": {
+                "account_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "account_number": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 5
+                },
+                "bank_code": {
+                    "enum": [
+                        "BCA",
+                        "BNI",
+                        "BRI",
+                        "BSI",
+                        "MANDIRI",
+                        "PERMATA",
+                        "CIMB"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.BankCode"
+                        }
+                    ]
+                },
+                "set_as_primary": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.AdminLoginInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.AdminOutput": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_login_at": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.AdminRole"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.AdminTokenOutput": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.BankAccountOutput": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.BankCode"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.CreateAdminInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "role"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "role": {
+                    "enum": [
+                        "super_admin",
+                        "ops",
+                        "finance"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.AdminRole"
+                        }
+                    ]
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.CreateMerchantInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "name"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "fee_config": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeConfig"
+                },
+                "is_production": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "webhook_url": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.CreateMerchantOutput": {
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MerchantStatus"
+                },
+                "webhook_secret": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.CreateQRISInput": {
+            "type": "object",
+            "required": [
+                "amount",
+                "currency",
+                "customer_email",
+                "customer_name",
+                "customer_phone",
+                "expiry_at",
+                "provider"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "callback_url": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "currency": {
+                    "enum": [
+                        "IDR"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.Currency"
+                        }
+                    ]
+                },
+                "customer_email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "customer_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "customer_phone": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 6
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "expiry_at": {
+                    "type": "string"
+                },
+                "provider": {
+                    "enum": [
+                        "midtrans",
+                        "xendit",
+                        "doku",
+                        "ipaymu"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.Provider"
+                        }
+                    ]
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.CreateVAInput": {
+            "type": "object",
+            "required": [
+                "amount",
+                "bank_code",
+                "currency",
+                "customer_email",
+                "customer_name",
+                "customer_phone",
+                "expiry_at",
+                "provider"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "bank_code": {
+                    "enum": [
+                        "BCA",
+                        "BNI",
+                        "BRI",
+                        "BSI",
+                        "MANDIRI",
+                        "PERMATA",
+                        "CIMB"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.BankCode"
+                        }
+                    ]
+                },
+                "callback_url": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "currency": {
+                    "enum": [
+                        "IDR"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.Currency"
+                        }
+                    ]
+                },
+                "customer_email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "customer_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "customer_phone": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 6
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "expiry_at": {
+                    "type": "string"
+                },
+                "provider": {
+                    "enum": [
+                        "midtrans",
+                        "xendit",
+                        "doku",
+                        "ipaymu"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.Provider"
+                        }
+                    ]
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.DisburseInput": {
+            "type": "object",
+            "required": [
+                "amount",
+                "bank_account_id",
+                "currency",
+                "provider"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "bank_account_id": {
+                    "type": "string"
+                },
+                "currency": {
+                    "enum": [
+                        "IDR"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.Currency"
+                        }
+                    ]
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "provider": {
+                    "enum": [
+                        "xendit",
+                        "doku"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/wanpey_core_internal_domain_entity.Provider"
+                        }
+                    ]
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.DisbursementOutput": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "bank_code": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.BankCode"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.Currency"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "failure_reason": {
+                    "type": "string"
+                },
+                "fee_amount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "provider": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.Provider"
+                },
+                "status": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.DisbursementStatus"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.MerchantOutput": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "fee_config": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeConfig"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MerchantStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "webhook_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.MutationOutput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.Currency"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "fee_amount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "net_amount": {
+                    "type": "integer"
+                },
+                "reference_id": {
+                    "type": "string"
+                },
+                "reference_type": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MutationReferenceType"
+                },
+                "type": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.MutationType"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.PaymentOutput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "bank_code": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.BankCode"
+                },
+                "cancelled_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.Currency"
+                },
+                "customer_email": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "expiry_at": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "fee_amount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "method": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.PaymentMethod"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "provider": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.Provider"
+                },
+                "qr_image_url": {
+                    "type": "string"
+                },
+                "qr_string": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.PaymentStatus"
+                },
+                "va_number": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.SetMerchantFeeInput": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "fee_config": {
+                    "$ref": "#/definitions/wanpey_core_internal_domain_entity.FeeConfig"
+                },
+                "reason": {
+                    "type": "string",
+                    "minLength": 10
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.UpdateMerchantInput": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "webhook_url": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
+        "wanpey_core_internal_usecase.WebhookEventOutput": {
+            "type": "object",
+            "properties": {
+                "attempt_count": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "delivered_at": {
+                    "type": "string"
+                },
+                "event_type": {
+                    "type": "string"
+                },
+                "failed_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "next_retry_at": {
+                    "type": "string"
+                },
+                "target_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_pkg_response.ErrorBody": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/wanpey_core_pkg_response.FieldDetail"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_pkg_response.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/wanpey_core_pkg_response.ErrorBody"
+                },
+                "meta": {
+                    "$ref": "#/definitions/wanpey_core_pkg_response.Meta"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "wanpey_core_pkg_response.FieldDetail": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_pkg_response.ListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "meta": {
+                    "$ref": "#/definitions/wanpey_core_pkg_response.Meta"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "wanpey_core_pkg_response.Meta": {
+            "type": "object",
+            "properties": {
+                "pagination": {
+                    "$ref": "#/definitions/wanpey_core_pkg_response.Pagination"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "wanpey_core_pkg_response.Pagination": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "wanpey_core_pkg_response.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "meta": {
+                    "$ref": "#/definitions/wanpey_core_pkg_response.Meta"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "AdminAuth": {
+            "description": "Admin JWT — Bearer \u003ctoken\u003e",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "ApiKeyAuth": {
+            "description": "Merchant API key",
+            "type": "apiKey",
+            "name": "X-API-Key",
+            "in": "header"
+        }
+    }
+}

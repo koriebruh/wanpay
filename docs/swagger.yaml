@@ -1,0 +1,2859 @@
+basePath: /
+definitions:
+  wanpey_core_internal_domain_entity.AdminRole:
+    enum:
+    - super_admin
+    - ops
+    - finance
+    type: string
+    x-enum-varnames:
+    - AdminRoleSuperAdmin
+    - AdminRoleOps
+    - AdminRoleFinance
+  wanpey_core_internal_domain_entity.BankCode:
+    enum:
+    - BCA
+    - BNI
+    - BRI
+    - BSI
+    - MANDIRI
+    - PERMATA
+    - CIMB
+    type: string
+    x-enum-varnames:
+    - BankBCA
+    - BankBNI
+    - BankBRI
+    - BankBSI
+    - BankMandiri
+    - BankPermata
+    - BankCIMB
+  wanpey_core_internal_domain_entity.Currency:
+    enum:
+    - IDR
+    type: string
+    x-enum-varnames:
+    - CurrencyIDR
+  wanpey_core_internal_domain_entity.DisbursementStatus:
+    enum:
+    - pending
+    - processing
+    - completed
+    - failed
+    type: string
+    x-enum-varnames:
+    - DisbursementStatusPending
+    - DisbursementStatusProcessing
+    - DisbursementStatusCompleted
+    - DisbursementStatusFailed
+  wanpey_core_internal_domain_entity.FeeConfig:
+    properties:
+      disbursement:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+      qris:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+      va:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+    type: object
+  wanpey_core_internal_domain_entity.FeeDefault:
+    properties:
+      createdAt:
+        type: string
+      disbursement:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+      id:
+        type: string
+      qris:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+      updatedAt:
+        type: string
+      updatedBy:
+        description: admin_id
+        type: string
+      va:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+    type: object
+  wanpey_core_internal_domain_entity.FeeHoliday:
+    properties:
+      createdAt:
+        type: string
+      createdBy:
+        description: admin_id
+        type: string
+      date:
+        description: DATE only (no time component)
+        type: string
+      id:
+        type: string
+      isActive:
+        type: boolean
+      name:
+        description: e.g. "Idul Fitri 1446H"
+        type: string
+      surcharge:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+        description: additional fee for ALL methods on this date
+      type:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.HolidayType'
+      updatedAt:
+        type: string
+      updatedBy:
+        description: admin_id
+        type: string
+    type: object
+  wanpey_core_internal_domain_entity.FeeType:
+    enum:
+    - flat
+    - percentage
+    type: string
+    x-enum-comments:
+      FeeTypeFlat: fixed IDR amount per transaction
+      FeeTypePercentage: '% of transaction amount'
+    x-enum-descriptions:
+    - fixed IDR amount per transaction
+    - '% of transaction amount'
+    x-enum-varnames:
+    - FeeTypeFlat
+    - FeeTypePercentage
+  wanpey_core_internal_domain_entity.HolidayType:
+    enum:
+    - national
+    - custom
+    type: string
+    x-enum-comments:
+      HolidayTypeCustom: admin-defined special days
+      HolidayTypeNational: Lebaran, Natal, etc.
+    x-enum-descriptions:
+    - Lebaran, Natal, etc.
+    - admin-defined special days
+    x-enum-varnames:
+    - HolidayTypeNational
+    - HolidayTypeCustom
+  wanpey_core_internal_domain_entity.MerchantStatus:
+    enum:
+    - pending
+    - active
+    - suspended
+    - inactive
+    type: string
+    x-enum-comments:
+      MerchantStatusInactive: closed account
+      MerchantStatusPending: awaiting KYC/approval
+      MerchantStatusSuspended: temporarily blocked
+    x-enum-descriptions:
+    - awaiting KYC/approval
+    - ""
+    - temporarily blocked
+    - closed account
+    x-enum-varnames:
+    - MerchantStatusPending
+    - MerchantStatusActive
+    - MerchantStatusSuspended
+    - MerchantStatusInactive
+  wanpey_core_internal_domain_entity.MethodFee:
+    properties:
+      amount:
+        type: integer
+      percentage:
+        type: number
+      type:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeType'
+    type: object
+  wanpey_core_internal_domain_entity.MutationReferenceType:
+    enum:
+    - payment
+    - disbursement
+    type: string
+    x-enum-varnames:
+    - MutationRefPayment
+    - MutationRefDisbursement
+  wanpey_core_internal_domain_entity.MutationType:
+    enum:
+    - cash_in
+    - cash_out
+    type: string
+    x-enum-varnames:
+    - MutationTypeCashIn
+    - MutationTypeCashOut
+  wanpey_core_internal_domain_entity.PaymentMethod:
+    enum:
+    - va
+    - qris
+    - cc
+    type: string
+    x-enum-comments:
+      PaymentMethodCC: coming soon
+    x-enum-descriptions:
+    - ""
+    - ""
+    - coming soon
+    x-enum-varnames:
+    - PaymentMethodVA
+    - PaymentMethodQRIS
+    - PaymentMethodCC
+  wanpey_core_internal_domain_entity.PaymentStatus:
+    enum:
+    - pending
+    - cancelling
+    - paid
+    - expired
+    - failed
+    - cancelled
+    type: string
+    x-enum-comments:
+      PaymentStatusCancelling: 'transient: provider call in-flight'
+    x-enum-descriptions:
+    - ""
+    - 'transient: provider call in-flight'
+    - ""
+    - ""
+    - ""
+    - ""
+    x-enum-varnames:
+    - PaymentStatusPending
+    - PaymentStatusCancelling
+    - PaymentStatusPaid
+    - PaymentStatusExpired
+    - PaymentStatusFailed
+    - PaymentStatusCancelled
+  wanpey_core_internal_domain_entity.PlatformMargin:
+    properties:
+      createdAt:
+        type: string
+      disbursement:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+      enabled:
+        type: boolean
+      id:
+        type: string
+      qris:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+      updatedAt:
+        type: string
+      updatedBy:
+        description: admin_id
+        type: string
+      va:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MethodFee'
+    type: object
+  wanpey_core_internal_domain_entity.Provider:
+    enum:
+    - midtrans
+    - xendit
+    - doku
+    - ipaymu
+    type: string
+    x-enum-varnames:
+    - ProviderMidtrans
+    - ProviderXendit
+    - ProviderDoku
+    - ProviderIPaymu
+  wanpey_core_internal_domain_entity.ProviderBalance:
+    properties:
+      balanceIDR:
+        description: last known balance; updated after settlement or manual reconciliation
+        format: int64
+        type: integer
+      createdAt:
+        type: string
+      id:
+        type: string
+      lastReconciledAt:
+        description: nil = never reconciled
+        type: string
+      note:
+        type: string
+      provider:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.Provider'
+      updatedAt:
+        type: string
+    type: object
+  wanpey_core_internal_usecase.AddBankAccountInput:
+    properties:
+      account_name:
+        maxLength: 100
+        type: string
+      account_number:
+        maxLength: 20
+        minLength: 5
+        type: string
+      bank_code:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.BankCode'
+        enum:
+        - BCA
+        - BNI
+        - BRI
+        - BSI
+        - MANDIRI
+        - PERMATA
+        - CIMB
+      set_as_primary:
+        type: boolean
+    required:
+    - account_name
+    - account_number
+    - bank_code
+    type: object
+  wanpey_core_internal_usecase.AdminLoginInput:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  wanpey_core_internal_usecase.AdminOutput:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_login_at:
+        type: string
+      role:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.AdminRole'
+    type: object
+  wanpey_core_internal_usecase.AdminTokenOutput:
+    properties:
+      access_token:
+        type: string
+      expires_at:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  wanpey_core_internal_usecase.BankAccountOutput:
+    properties:
+      account_name:
+        type: string
+      account_number:
+        type: string
+      bank_code:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.BankCode'
+      created_at:
+        type: string
+      id:
+        type: string
+      is_primary:
+        type: boolean
+      is_verified:
+        type: boolean
+    type: object
+  wanpey_core_internal_usecase.CreateAdminInput:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.AdminRole'
+        enum:
+        - super_admin
+        - ops
+        - finance
+    required:
+    - email
+    - password
+    - role
+    type: object
+  wanpey_core_internal_usecase.CreateMerchantInput:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+      fee_config:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeConfig'
+      is_production:
+        type: boolean
+      name:
+        maxLength: 100
+        type: string
+      phone:
+        maxLength: 20
+        type: string
+      webhook_url:
+        maxLength: 500
+        type: string
+    required:
+    - email
+    - name
+    type: object
+  wanpey_core_internal_usecase.CreateMerchantOutput:
+    properties:
+      api_key:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MerchantStatus'
+      webhook_secret:
+        type: string
+    type: object
+  wanpey_core_internal_usecase.CreateQRISInput:
+    properties:
+      amount:
+        type: integer
+      callback_url:
+        maxLength: 500
+        type: string
+      currency:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.Currency'
+        enum:
+        - IDR
+      customer_email:
+        maxLength: 255
+        type: string
+      customer_name:
+        maxLength: 100
+        type: string
+      customer_phone:
+        maxLength: 20
+        minLength: 6
+        type: string
+      description:
+        maxLength: 255
+        type: string
+      expiry_at:
+        type: string
+      provider:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.Provider'
+        enum:
+        - midtrans
+        - xendit
+        - doku
+        - ipaymu
+    required:
+    - amount
+    - currency
+    - customer_email
+    - customer_name
+    - customer_phone
+    - expiry_at
+    - provider
+    type: object
+  wanpey_core_internal_usecase.CreateVAInput:
+    properties:
+      amount:
+        type: integer
+      bank_code:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.BankCode'
+        enum:
+        - BCA
+        - BNI
+        - BRI
+        - BSI
+        - MANDIRI
+        - PERMATA
+        - CIMB
+      callback_url:
+        maxLength: 500
+        type: string
+      currency:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.Currency'
+        enum:
+        - IDR
+      customer_email:
+        maxLength: 255
+        type: string
+      customer_name:
+        maxLength: 100
+        type: string
+      customer_phone:
+        maxLength: 20
+        minLength: 6
+        type: string
+      description:
+        maxLength: 255
+        type: string
+      expiry_at:
+        type: string
+      provider:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.Provider'
+        enum:
+        - midtrans
+        - xendit
+        - doku
+        - ipaymu
+    required:
+    - amount
+    - bank_code
+    - currency
+    - customer_email
+    - customer_name
+    - customer_phone
+    - expiry_at
+    - provider
+    type: object
+  wanpey_core_internal_usecase.DisburseInput:
+    properties:
+      amount:
+        type: integer
+      bank_account_id:
+        type: string
+      currency:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.Currency'
+        enum:
+        - IDR
+      description:
+        maxLength: 255
+        type: string
+      provider:
+        allOf:
+        - $ref: '#/definitions/wanpey_core_internal_domain_entity.Provider'
+        enum:
+        - xendit
+        - doku
+    required:
+    - amount
+    - bank_account_id
+    - currency
+    - provider
+    type: object
+  wanpey_core_internal_usecase.DisbursementOutput:
+    properties:
+      account_name:
+        type: string
+      account_number:
+        type: string
+      amount:
+        type: integer
+      bank_code:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.BankCode'
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      currency:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.Currency'
+      description:
+        type: string
+      external_id:
+        type: string
+      failure_reason:
+        type: string
+      fee_amount:
+        type: integer
+      id:
+        type: string
+      provider:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.Provider'
+      status:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.DisbursementStatus'
+    type: object
+  wanpey_core_internal_usecase.MerchantOutput:
+    properties:
+      balance:
+        type: integer
+      created_at:
+        type: string
+      email:
+        type: string
+      fee_config:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeConfig'
+      id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      status:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MerchantStatus'
+      updated_at:
+        type: string
+      webhook_url:
+        type: string
+    type: object
+  wanpey_core_internal_usecase.MutationOutput:
+    properties:
+      amount:
+        type: integer
+      created_at:
+        type: string
+      currency:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.Currency'
+      description:
+        type: string
+      fee_amount:
+        type: integer
+      id:
+        type: string
+      net_amount:
+        type: integer
+      reference_id:
+        type: string
+      reference_type:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MutationReferenceType'
+      type:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.MutationType'
+    type: object
+  wanpey_core_internal_usecase.PaymentOutput:
+    properties:
+      amount:
+        type: integer
+      bank_code:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.BankCode'
+      cancelled_at:
+        type: string
+      created_at:
+        type: string
+      currency:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.Currency'
+      customer_email:
+        type: string
+      customer_name:
+        type: string
+      expiry_at:
+        type: string
+      external_id:
+        type: string
+      fee_amount:
+        type: integer
+      id:
+        type: string
+      method:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.PaymentMethod'
+      paid_at:
+        type: string
+      provider:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.Provider'
+      qr_image_url:
+        type: string
+      qr_string:
+        type: string
+      status:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.PaymentStatus'
+      va_number:
+        type: string
+    type: object
+  wanpey_core_internal_usecase.SetMerchantFeeInput:
+    properties:
+      fee_config:
+        $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeConfig'
+      reason:
+        minLength: 10
+        type: string
+    required:
+    - reason
+    type: object
+  wanpey_core_internal_usecase.UpdateMerchantInput:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      phone:
+        maxLength: 20
+        type: string
+      webhook_url:
+        maxLength: 500
+        type: string
+    type: object
+  wanpey_core_internal_usecase.WebhookEventOutput:
+    properties:
+      attempt_count:
+        type: integer
+      created_at:
+        type: string
+      delivered_at:
+        type: string
+      event_type:
+        type: string
+      failed_at:
+        type: string
+      id:
+        type: string
+      next_retry_at:
+        type: string
+      target_url:
+        type: string
+    type: object
+  wanpey_core_pkg_response.ErrorBody:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/wanpey_core_pkg_response.FieldDetail'
+        type: array
+      message:
+        type: string
+    type: object
+  wanpey_core_pkg_response.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/wanpey_core_pkg_response.ErrorBody'
+      meta:
+        $ref: '#/definitions/wanpey_core_pkg_response.Meta'
+      success:
+        example: false
+        type: boolean
+    type: object
+  wanpey_core_pkg_response.FieldDetail:
+    properties:
+      field:
+        type: string
+      message:
+        type: string
+    type: object
+  wanpey_core_pkg_response.ListResponse:
+    properties:
+      data: {}
+      meta:
+        $ref: '#/definitions/wanpey_core_pkg_response.Meta'
+      success:
+        example: true
+        type: boolean
+    type: object
+  wanpey_core_pkg_response.Meta:
+    properties:
+      pagination:
+        $ref: '#/definitions/wanpey_core_pkg_response.Pagination'
+      timestamp:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  wanpey_core_pkg_response.Pagination:
+    properties:
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  wanpey_core_pkg_response.SuccessResponse:
+    properties:
+      data: {}
+      meta:
+        $ref: '#/definitions/wanpey_core_pkg_response.Meta'
+      success:
+        example: true
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@wanpey.id
+    name: Wanpey Support
+  description: |-
+    Payment gateway aggregator — VA, QRIS, and disbursement via Midtrans, Xendit, DOKU, iPaymu.
+
+    ## Authentication
+    Merchant endpoints (/v1/*): `X-API-Key` header with your API key (`wpay_live_*` or `wpay_test_*`).
+    Admin endpoints (/admin/*): `Authorization: Bearer <access_token>` from POST /admin/login.
+
+    ## Idempotency
+    Payment and disbursement creation support `Idempotency-Key` header. Use unique key per request to safely retry.
+
+    ## Webhook
+    Wanpey signs outbound webhooks with `X-Wanpey-Signature` (HMAC-SHA256). Verify using your webhook secret.
+  title: Wanpey Payment Gateway API
+  version: "1.0"
+paths:
+  /admin/admins:
+    get:
+      description: 'Returns all admin accounts. Roles: super_admin only.'
+      parameters:
+      - description: 'Page (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.AdminOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: List admin users
+      tags:
+      - Admin / Management
+    post:
+      consumes:
+      - application/json
+      description: 'Creates a new admin account. Roles: super_admin only.'
+      parameters:
+      - description: Admin details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.CreateAdminInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.AdminOutput'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Create admin user
+      tags:
+      - Admin / Management
+  /admin/admins/{id}/deactivate:
+    patch:
+      description: 'Deactivates an admin account. Cannot deactivate yourself. Roles:
+        super_admin only.'
+      parameters:
+      - description: Admin ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "422":
+          description: Cannot deactivate yourself
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Deactivate admin user
+      tags:
+      - Admin / Management
+  /admin/disbursements:
+    get:
+      description: 'Returns paginated disbursements across all merchants. Roles: all
+        admin roles.'
+      parameters:
+      - description: 'Page (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by merchant ID
+        in: query
+        name: merchant_id
+        type: string
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Filter by provider
+        in: query
+        name: provider
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.DisbursementOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: List all disbursements (admin)
+      tags:
+      - Admin / Disbursements
+  /admin/disbursements/{id}:
+    get:
+      description: Returns disbursement detail by ID across all merchants.
+      parameters:
+      - description: Disbursement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.DisbursementOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get disbursement detail (admin)
+      tags:
+      - Admin / Disbursements
+  /admin/fees/default:
+    get:
+      description: 'Returns the platform''s global default fee applied when a merchant
+        has no custom contract. Roles: super_admin, finance.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeDefault'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get global default fee
+      tags:
+      - Admin / Fee Management
+    put:
+      consumes:
+      - application/json
+      description: 'Updates the platform''s global default fee. Mandatory reason for
+        audit trail. Roles: super_admin, finance.'
+      parameters:
+      - description: New fee config + reason (min 10 chars)
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            fee_config:
+              $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeConfig'
+            reason:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Update global default fee
+      tags:
+      - Admin / Fee Management
+  /admin/fees/holidays:
+    get:
+      description: 'Returns all configured holiday surcharges. Roles: super_admin,
+        finance.'
+      parameters:
+      - description: 'Page (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeHoliday'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: List holiday surcharges
+      tags:
+      - Admin / Fee Management
+    post:
+      consumes:
+      - application/json
+      description: 'Adds a fee surcharge for a specific date (e.g. public holiday).
+        Roles: super_admin, finance.'
+      parameters:
+      - description: Holiday config
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeHoliday'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeHoliday'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Create holiday surcharge
+      tags:
+      - Admin / Fee Management
+  /admin/fees/holidays/{id}:
+    put:
+      consumes:
+      - application/json
+      description: 'Updates an existing holiday surcharge (can toggle active state).
+        Roles: super_admin, finance.'
+      parameters:
+      - description: Holiday ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated holiday config
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeHoliday'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeHoliday'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Update holiday surcharge
+      tags:
+      - Admin / Fee Management
+  /admin/fees/margin:
+    get:
+      description: 'Returns Wanpey''s platform margin added on top of base fees. Roles:
+        super_admin, finance.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_domain_entity.PlatformMargin'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get platform margin
+      tags:
+      - Admin / Fee Management
+    put:
+      consumes:
+      - application/json
+      description: 'Updates Wanpey''s margin on top of all fees. Can be toggled on/off
+        per method. Roles: super_admin only.'
+      parameters:
+      - description: Margin config + reason
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            enabled:
+              type: boolean
+            margin:
+              $ref: '#/definitions/wanpey_core_internal_domain_entity.FeeConfig'
+            reason:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Update platform margin
+      tags:
+      - Admin / Fee Management
+  /admin/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates an admin and returns access + refresh tokens. Access
+        token expires based on config (default 8h). Never distinguish wrong email
+        vs wrong password in errors.
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.AdminLoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.AdminTokenOutput'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      summary: Admin login
+      tags:
+      - Admin / Auth
+  /admin/me:
+    get:
+      description: Returns the authenticated admin's profile and role.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.AdminOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get current admin profile
+      tags:
+      - Admin / Auth
+  /admin/me/password:
+    patch:
+      consumes:
+      - application/json
+      description: Changes the authenticated admin's password. Requires current password
+        for verification.
+      parameters:
+      - description: Password change
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            new_password:
+              type: string
+            old_password:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Change admin password
+      tags:
+      - Admin / Auth
+  /admin/merchants:
+    get:
+      description: 'Returns paginated list of all merchants. Roles: all admin roles.'
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Filter: pending, active, suspended, inactive'
+        in: query
+        name: status
+        type: string
+      - description: Search by name or email
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.MerchantOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: List all merchants
+      tags:
+      - Admin / Merchants
+    post:
+      consumes:
+      - application/json
+      description: 'Registers a new merchant. Returns API key once — store it securely.
+        Roles: super_admin, ops.'
+      parameters:
+      - description: Merchant details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.CreateMerchantInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.CreateMerchantOutput'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Create merchant
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}:
+    delete:
+      description: 'Soft-deletes a merchant. Data is retained for audit. Roles: super_admin.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Delete merchant (soft)
+      tags:
+      - Admin / Merchants
+    get:
+      description: 'Returns merchant detail by ID. Roles: all admin roles.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.MerchantOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get merchant detail
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}/api-key/regenerate:
+    post:
+      description: 'Generates a new API key for a merchant and invalidates the old
+        one. Raw key shown once. Roles: super_admin, ops.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    api_key:
+                      type: string
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Regenerate merchant API key
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}/approve:
+    patch:
+      description: 'Activates a pending merchant so they can start transacting. Roles:
+        super_admin, ops.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Approve merchant
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}/bank-accounts:
+    get:
+      description: Returns all bank accounts for a merchant including verification
+        status.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.BankAccountOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: List merchant bank accounts
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}/bank-accounts/{aid}/verify:
+    patch:
+      description: 'Marks a merchant''s bank account as verified. Only verified accounts
+        can receive disbursements. Roles: super_admin, ops.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Bank account ID
+        in: path
+        name: aid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Verify bank account
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}/cashout-limit:
+    patch:
+      consumes:
+      - application/json
+      description: 'Sets the maximum total disbursement amount per day in IDR. 0 =
+        unlimited. Roles: super_admin, finance.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Daily limit in IDR
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            limit_idr:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Set daily cashout limit
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}/deactivate:
+    patch:
+      description: 'Permanently deactivates a merchant. Roles: super_admin, ops.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Deactivate merchant
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}/fee:
+    patch:
+      consumes:
+      - application/json
+      description: 'Sets custom VA, QRIS, and disbursement fees for a merchant. Reason
+        is mandatory for audit trail. Roles: super_admin, finance.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fee config + reason
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.SetMerchantFeeInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Set merchant fee config
+      tags:
+      - Admin / Merchants
+  /admin/merchants/{id}/suspend:
+    patch:
+      description: 'Suspends an active merchant — blocks new transactions. Roles:
+        super_admin, ops.'
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Suspend merchant
+      tags:
+      - Admin / Merchants
+  /admin/mutations:
+    get:
+      description: 'Returns paginated ledger mutations across all merchants. Roles:
+        super_admin, finance.'
+      parameters:
+      - description: 'Page (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by merchant ID
+        in: query
+        name: merchant_id
+        type: string
+      - description: 'Filter by type: credit, debit'
+        in: query
+        name: type
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.MutationOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: List all mutations (admin)
+      tags:
+      - Admin / Mutations
+  /admin/payments:
+    get:
+      description: 'Returns paginated payments across all merchants. Roles: all admin
+        roles.'
+      parameters:
+      - description: 'Page (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by merchant ID
+        in: query
+        name: merchant_id
+        type: string
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Filter by provider
+        in: query
+        name: provider
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.PaymentOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: List all payments (admin)
+      tags:
+      - Admin / Payments
+  /admin/payments/{id}:
+    get:
+      description: Returns payment detail by ID across all merchants.
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.PaymentOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get payment detail (admin)
+      tags:
+      - Admin / Payments
+  /admin/provider-balances:
+    get:
+      description: 'Returns platform''s known balance at each payment provider. Roles:
+        super_admin, finance.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_domain_entity.ProviderBalance'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get provider balances
+      tags:
+      - Admin / Treasury
+  /admin/provider-balances/{provider}:
+    patch:
+      consumes:
+      - application/json
+      description: 'Manually records the platform''s balance at a specific provider
+        (for reconciliation). Roles: super_admin, finance.'
+      parameters:
+      - description: 'Provider: midtrans, xendit, doku, ipaymu'
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Balance in IDR
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            balance_idr:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Update provider balance
+      tags:
+      - Admin / Treasury
+  /admin/token/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges a valid refresh token for a new access + refresh token
+        pair.
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            refresh_token:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.AdminTokenOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - Admin / Auth
+  /v1/disbursements:
+    get:
+      description: Returns paginated list of disbursements for the authenticated merchant.
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Filter by status: pending, processing, completed, failed'
+        in: query
+        name: status
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.DisbursementOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List disbursements
+      tags:
+      - Disbursements
+    post:
+      consumes:
+      - application/json
+      description: Sends funds from merchant balance to a registered verified bank
+        account. The bank account must be verified by admin before use. Daily cashout
+        limit applies if configured.
+      parameters:
+      - description: Unique key to prevent duplicate disbursements on retry
+        in: header
+        name: Idempotency-Key
+        type: string
+      - description: Disbursement request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.DisburseInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.DisbursementOutput'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "402":
+          description: Insufficient balance
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "422":
+          description: Bank account not verified or daily limit exceeded
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create disbursement (cash out)
+      tags:
+      - Disbursements
+  /v1/disbursements/{id}:
+    get:
+      description: Returns full disbursement detail including status, bank account
+        info, and fee breakdown.
+      parameters:
+      - description: Disbursement ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.DisbursementOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get disbursement detail
+      tags:
+      - Disbursements
+  /v1/merchants/me:
+    get:
+      description: Returns the authenticated merchant's profile, status, and configuration.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.MerchantOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get merchant profile
+      tags:
+      - Merchant
+    patch:
+      consumes:
+      - application/json
+      description: Updates merchant name, webhook URL, or other profile fields. FeeConfig
+        cannot be changed here — contact admin.
+      parameters:
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.UpdateMerchantInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.MerchantOutput'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update merchant profile
+      tags:
+      - Merchant
+  /v1/merchants/me/api-key/regenerate:
+    post:
+      description: Generates a new API key and immediately invalidates the old one.
+        The raw key is shown only once — store it securely.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    api_key:
+                      type: string
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Regenerate API key
+      tags:
+      - Merchant
+  /v1/merchants/me/bank-accounts:
+    get:
+      description: Returns all registered bank accounts for the authenticated merchant
+        (max 3).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.BankAccountOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List bank accounts
+      tags:
+      - Merchant / Bank Accounts
+    post:
+      consumes:
+      - application/json
+      description: Registers a new bank account for disbursement. Max 3 accounts per
+        merchant. New accounts must be verified by admin before they can receive disbursements.
+      parameters:
+      - description: Bank account details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.AddBankAccountInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.BankAccountOutput'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "422":
+          description: Maximum 3 bank accounts reached
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Add bank account
+      tags:
+      - Merchant / Bank Accounts
+  /v1/merchants/me/bank-accounts/{id}:
+    delete:
+      description: Removes a registered bank account. Cannot remove the primary account
+        if other accounts exist.
+      parameters:
+      - description: Bank account ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Bank account removed
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Remove bank account
+      tags:
+      - Merchant / Bank Accounts
+  /v1/merchants/me/bank-accounts/{id}/primary:
+    patch:
+      description: Marks a bank account as the primary account for disbursements.
+      parameters:
+      - description: Bank account ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Set primary bank account
+      tags:
+      - Merchant / Bank Accounts
+  /v1/merchants/me/webhook-events:
+    get:
+      description: Returns outbound webhook delivery history for this merchant — useful
+        for debugging failed deliveries.
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.WebhookEventOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List webhook delivery events
+      tags:
+      - Merchant
+  /v1/mutations:
+    get:
+      description: Returns paginated ledger mutations (credits and debits) for the
+        authenticated merchant.
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Filter by type: credit, debit'
+        in: query
+        name: type
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.MutationOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List ledger mutations
+      tags:
+      - Mutations (Ledger)
+  /v1/mutations/{id}:
+    get:
+      description: Returns a single ledger mutation by ID.
+      parameters:
+      - description: Mutation ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.MutationOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get mutation detail
+      tags:
+      - Mutations (Ledger)
+  /v1/mutations/balance:
+    get:
+      description: Returns the merchant's current spendable balance in IDR (calculated
+        live from ledger).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    balance:
+                      type: integer
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get current balance
+      tags:
+      - Mutations (Ledger)
+  /v1/payments:
+    get:
+      description: Returns paginated list of payments for the authenticated merchant.
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Filter by status: pending, paid, expired, cancelled, failed'
+        in: query
+        name: status
+        type: string
+      - description: 'Filter by provider: midtrans, xendit, doku, ipaymu'
+        in: query
+        name: provider
+        type: string
+      - description: 'Filter by method: va, qris'
+        in: query
+        name: method
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.ListResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/wanpey_core_internal_usecase.PaymentOutput'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List payments
+      tags:
+      - Payments
+  /v1/payments/{id}:
+    delete:
+      description: Cancels a pending payment. Uses a two-step process (pending → cancelling
+        → cancelled) for financial safety. Only pending payments can be cancelled.
+      parameters:
+      - description: Payment ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Payment cancelled successfully
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "422":
+          description: Payment is already in a final state
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Cancel a payment
+      tags:
+      - Payments
+    get:
+      description: Returns full payment detail including status, VA/QR data, and fee
+        breakdown.
+      parameters:
+      - description: Payment ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.PaymentOutput'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get payment detail
+      tags:
+      - Payments
+  /v1/payments/qris:
+    post:
+      consumes:
+      - application/json
+      description: Creates a QRIS payment and returns a QR code string for the customer
+        to scan.
+      parameters:
+      - description: Unique key to prevent duplicate payments on retry
+        in: header
+        name: Idempotency-Key
+        type: string
+      - description: QRIS payment request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.CreateQRISInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.PaymentOutput'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create QRIS payment
+      tags:
+      - Payments
+  /v1/payments/va:
+    post:
+      consumes:
+      - application/json
+      description: Creates a VA payment via the specified provider. Returns VA number
+        and bank details for the customer to pay.
+      parameters:
+      - description: Unique key to prevent duplicate payments on retry
+        in: header
+        name: Idempotency-Key
+        type: string
+      - description: VA payment request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/wanpey_core_internal_usecase.CreateVAInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/wanpey_core_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/wanpey_core_internal_usecase.PaymentOutput'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/wanpey_core_pkg_response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create Virtual Account payment
+      tags:
+      - Payments
+schemes:
+- http
+- https
+securityDefinitions:
+  AdminAuth:
+    description: Admin JWT — Bearer <token>
+    in: header
+    name: Authorization
+    type: apiKey
+  ApiKeyAuth:
+    description: Merchant API key
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"

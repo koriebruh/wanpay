@@ -2,8 +2,10 @@ package http
 
 import (
 	"github.com/labstack/echo/v4"
+	echoswagger "github.com/swaggo/echo-swagger"
 	"go.uber.org/zap"
 
+	_ "wanpey/core/docs" // swagger generated docs
 	"wanpey/core/internal/delivery/http/handler"
 	httpmw "wanpey/core/internal/delivery/http/middleware"
 	"wanpey/core/internal/domain/entity"
@@ -28,6 +30,8 @@ type Routes struct {
 
 // Register mounts all API routes on the Echo instance.
 func Register(e *echo.Echo, r Routes) {
+	// Swagger UI — available at /swagger/index.html
+	e.GET("/swagger/*", echoswagger.WrapHandler)
 	auth := httpmw.APIKeyAuth(r.MerchantRepo)
 	idempotency := httpmw.Idempotency(r.Cache)
 
