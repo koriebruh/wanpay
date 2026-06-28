@@ -62,6 +62,8 @@ type Querier interface {
 	ListProviderBalances(ctx context.Context) ([]ProviderBalance, error)
 	MarkOutboxDelivered(ctx context.Context, id string) error
 	MarkOutboxFailed(ctx context.Context, arg MarkOutboxFailedParams) error
+	MarkOutboxFailedFinal(ctx context.Context, arg MarkOutboxFailedFinalParams) error
+	ScheduleOutboxRetry(ctx context.Context, arg ScheduleOutboxRetryParams) error
 	SoftDeleteMerchant(ctx context.Context, id string) error
 	// Returns total amount disbursed by a merchant today (WIB UTC+7).
 	// Excludes failed and cancelled disbursements.

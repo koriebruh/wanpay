@@ -7,6 +7,7 @@ package gen
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -174,7 +175,8 @@ func (q *Queries) MarkOutboxDelivered(ctx context.Context, id string) error {
 const markOutboxFailed = `-- name: MarkOutboxFailed :exec
 UPDATE outbox
 SET attempt_count = attempt_count + 1,
-    next_retry_at = $2,
+    last_error    = $2,
+    next_retry_at = $3,
     failed_at     = CASE
                         WHEN attempt_count + 1 >= max_attempts THEN NOW()
                         ELSE NULL
@@ -183,11 +185,55 @@ WHERE id = $1
 `
 
 type MarkOutboxFailedParams struct {
-	ID          string    `json:"id"`
-	NextRetryAt time.Time `json:"next_retry_at"`
+	ID          string         `json:"id"`
+	LastError   sql.NullString `json:"last_error"`
+	NextRetryAt time.Time      `json:"next_retry_at"`
 }
 
 func (q *Queries) MarkOutboxFailed(ctx context.Context, arg MarkOutboxFailedParams) error {
-	_, err := q.db.ExecContext(ctx, markOutboxFailed, arg.ID, arg.NextRetryAt)
+	_, err := q.db.ExecContext(ctx, markOutboxFailed, arg.ID, arg.LastError, arg.NextRetryAt)
+	return err
+}
+
+const markOutboxFailedFinal = `-- name: MarkOutboxFailedFinal :exec
+UPDATE outbox
+SET attempt_count = max_attempts,
+    last_error    = $2,
+    failed_at     = NOW()
+WHERE id = $1
+`
+
+type MarkOutboxFailedFinalParams struct {
+	ID        string         `json:"id"`
+	LastError sql.NullString `json:"last_error"`
+}
+
+func (q *Queries) MarkOutboxFailedFinal(ctx context.Context, arg MarkOutboxFailedFinalParams) error {
+	_, err := q.db.ExecContext(ctx, markOutboxFailedFinal, arg.ID, arg.LastError)
+	return err
+}
+
+const scheduleOutboxRetry = `-- name: ScheduleOutboxRetry :exec
+UPDATE outbox
+SET attempt_count = $2,
+    last_error    = $3,
+    next_retry_at = NOW() + ($4 || ' seconds')::interval
+WHERE id = $1
+`
+
+type ScheduleOutboxRetryParams struct {
+	ID           string         `json:"id"`
+	AttemptCount int32          `json:"attempt_count"`
+	LastError    sql.NullString `json:"last_error"`
+	Column4      sql.NullString `json:"column_4"`
+}
+
+func (q *Queries) ScheduleOutboxRetry(ctx context.Context, arg ScheduleOutboxRetryParams) error {
+	_, err := q.db.ExecContext(ctx, scheduleOutboxRetry,
+		arg.ID,
+		arg.AttemptCount,
+		arg.LastError,
+		arg.Column4,
+	)
 	return err
 }

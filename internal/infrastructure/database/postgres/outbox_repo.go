@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -99,12 +100,39 @@ func (r *OutboxRepo) ListByMerchant(ctx context.Context, merchantID string, page
 
 // MarkFailed increments the attempt counter and schedules the next retry.
 // When max_attempts is reached, failed_at is set and the event stops being leased.
-func (r *OutboxRepo) MarkFailed(ctx context.Context, id string, nextRetry time.Time) error {
+func (r *OutboxRepo) MarkFailed(ctx context.Context, id, lastErr string, nextRetry time.Time) error {
 	if err := r.q.MarkOutboxFailed(ctx, gen.MarkOutboxFailedParams{
 		ID:          id,
+		LastError:   sql.NullString{String: lastErr, Valid: lastErr != ""},
 		NextRetryAt: nextRetry,
 	}); err != nil {
 		return fmt.Errorf("mark outbox failed: %w", err)
+	}
+	return nil
+}
+
+// MarkFailedFinal marks an event as permanently failed (e.g. invalid URL or max attempts).
+// Sets attempt_count = max_attempts so the event is never leased again.
+func (r *OutboxRepo) MarkFailedFinal(ctx context.Context, id, lastErr string) error {
+	if err := r.q.MarkOutboxFailedFinal(ctx, gen.MarkOutboxFailedFinalParams{
+		ID:        id,
+		LastError: sql.NullString{String: lastErr, Valid: lastErr != ""},
+	}); err != nil {
+		return fmt.Errorf("mark outbox failed final: %w", err)
+	}
+	return nil
+}
+
+// ScheduleRetry updates attempt_count, last_error, and next_retry_at for a retriable failure.
+func (r *OutboxRepo) ScheduleRetry(ctx context.Context, id, lastErr string, attempt int, delay time.Duration) error {
+	secs := fmt.Sprintf("%d", int(delay.Seconds()))
+	if err := r.q.ScheduleOutboxRetry(ctx, gen.ScheduleOutboxRetryParams{
+		ID:           id,
+		AttemptCount: int32(attempt), //nolint:gosec
+		LastError:    sql.NullString{String: lastErr, Valid: lastErr != ""},
+		Column4:      sql.NullString{String: secs, Valid: true},
+	}); err != nil {
+		return fmt.Errorf("schedule outbox retry: %w", err)
 	}
 	return nil
 }

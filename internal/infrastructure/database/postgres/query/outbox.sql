@@ -22,11 +22,26 @@ WHERE id = $1;
 -- name: MarkOutboxFailed :exec
 UPDATE outbox
 SET attempt_count = attempt_count + 1,
-    next_retry_at = $2,
+    last_error    = $2,
+    next_retry_at = $3,
     failed_at     = CASE
                         WHEN attempt_count + 1 >= max_attempts THEN NOW()
                         ELSE NULL
                     END
+WHERE id = $1;
+
+-- name: MarkOutboxFailedFinal :exec
+UPDATE outbox
+SET attempt_count = max_attempts,
+    last_error    = $2,
+    failed_at     = NOW()
+WHERE id = $1;
+
+-- name: ScheduleOutboxRetry :exec
+UPDATE outbox
+SET attempt_count = $2,
+    last_error    = $3,
+    next_retry_at = NOW() + ($4 || ' seconds')::interval
 WHERE id = $1;
 
 -- name: ListOutboxByMerchant :many

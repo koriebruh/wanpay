@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"wanpey/core/internal/infrastructure/database"
+	"wanpey/core/internal/infrastructure/database/postgres"
 	"wanpey/core/pkg/signature"
 )
 
@@ -40,14 +41,16 @@ type outboxRow struct {
 
 type OutboxWorker struct {
 	db         database.SQLDB
+	outboxRepo *postgres.OutboxRepo
 	httpClient *http.Client
 	log        *zap.Logger
 }
 
-func NewOutboxWorker(db database.SQLDB, log *zap.Logger) *OutboxWorker {
+func NewOutboxWorker(db database.SQLDB, outboxRepo *postgres.OutboxRepo, log *zap.Logger) *OutboxWorker {
 	return &OutboxWorker{
-		db:  db,
-		log: log,
+		db:         db,
+		outboxRepo: outboxRepo,
+		log:        log,
 		httpClient: &http.Client{
 			Timeout: outboxHTTPTimeout,
 			// Disable redirects — a merchant callback URL must not redirect to internal services.
@@ -155,7 +158,7 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 
 	if err := validateWebhookURL(row.TargetURL); err != nil {
 		log.Error("outbox: invalid target_url, marking failed", zap.Error(err))
-		if markErr := w.markFailed(dbCtx, row.ID, err.Error()); markErr != nil {
+		if markErr := w.outboxRepo.MarkFailedFinal(dbCtx, row.ID, err.Error()); markErr != nil {
 			log.Error("outbox: mark failed error", zap.Error(markErr))
 		}
 		return
@@ -163,7 +166,7 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 
 	err := w.post(ctx, row)
 	if err == nil {
-		if updateErr := w.markDelivered(dbCtx, row.ID); updateErr != nil {
+		if updateErr := w.outboxRepo.MarkDelivered(dbCtx, row.ID); updateErr != nil {
 			log.Error("outbox: mark delivered failed", zap.Error(updateErr))
 		} else {
 			log.Info("outbox: webhook delivered")
@@ -175,7 +178,7 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 
 	nextAttempt := row.Attempt + 1
 	if nextAttempt >= row.Max {
-		if markErr := w.markFailed(dbCtx, row.ID, truncate(err.Error(), outboxMaxErrLen)); markErr != nil {
+		if markErr := w.outboxRepo.MarkFailedFinal(dbCtx, row.ID, truncate(err.Error(), outboxMaxErrLen)); markErr != nil {
 			log.Error("outbox: mark failed error", zap.Error(markErr))
 		}
 		log.Error("outbox: max attempts reached, giving up", zap.Int("max_attempts", row.Max))
@@ -183,7 +186,7 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 	}
 
 	nextRetry := backoff(nextAttempt)
-	if schedErr := w.scheduleRetry(dbCtx, row.ID, nextAttempt, truncate(err.Error(), outboxMaxErrLen), nextRetry); schedErr != nil {
+	if schedErr := w.outboxRepo.ScheduleRetry(dbCtx, row.ID, truncate(err.Error(), outboxMaxErrLen), nextAttempt, nextRetry); schedErr != nil {
 		log.Error("outbox: schedule retry failed", zap.Error(schedErr))
 	}
 }
@@ -239,26 +242,6 @@ func (w *OutboxWorker) fetchSigningKey(ctx context.Context, merchantID string) (
 		return "", err
 	}
 	return key, nil
-}
-
-func (w *OutboxWorker) markDelivered(ctx context.Context, id string) error {
-	_, err := w.db.ExecContext(ctx,
-		`UPDATE outbox SET delivered_at = NOW() WHERE id = $1`, id)
-	return err
-}
-
-func (w *OutboxWorker) markFailed(ctx context.Context, id, lastErr string) error {
-	_, err := w.db.ExecContext(ctx,
-		`UPDATE outbox SET attempt_count = max_attempts, last_error = $2, failed_at = NOW() WHERE id = $1`,
-		id, lastErr)
-	return err
-}
-
-func (w *OutboxWorker) scheduleRetry(ctx context.Context, id string, nextAttempt int, lastErr string, delay time.Duration) error {
-	_, err := w.db.ExecContext(ctx,
-		`UPDATE outbox SET attempt_count = $2, last_error = $3, next_retry_at = NOW() + $4::interval WHERE id = $1`,
-		id, nextAttempt, lastErr, fmt.Sprintf("%d seconds", int(delay.Seconds())))
-	return err
 }
 
 // backoff returns exponential delay for attempt n: 1→10s, 2→40s, 3→90s, 4→160s, 5→250s.

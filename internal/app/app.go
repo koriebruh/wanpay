@@ -232,7 +232,7 @@ func (a *App) Run() error {
 	a.workerWg.Add(1)
 	go func() {
 		defer a.workerWg.Done()
-		worker.NewOutboxWorker(db, log).Run(workerCtx)
+		worker.NewOutboxWorker(db, outboxRepo, log).Run(workerCtx)
 	}()
 
 	a.workerWg.Add(1)
