@@ -95,14 +95,6 @@ type ProviderConfig struct {
 	CircuitBreaker CircuitBreakerConfig `toml:"circuit_breaker"`
 }
 
-type IPaymuConfig struct {
-	Enabled       bool   `toml:"enabled"`
-	APIKey        string `toml:"api_key"`
-	VA            string `toml:"va"`            // merchant's VA number from iPaymu dashboard
-	IsProduction  bool   `toml:"is_production"`
-	NotifyURL     string `toml:"notify_url"`    // webhook callback URL (without token — token appended automatically)
-	WebhookSecret string `toml:"webhook_secret"` // random secret appended as ?wt= to notifyURL for verification
-}
 
 type CircuitBreakerConfig struct {
 	MaxRequests         uint32 `toml:"max_requests"`         // max requests in half-open state
@@ -112,26 +104,39 @@ type CircuitBreakerConfig struct {
 }
 
 type MidtransConfig struct {
-	Enabled      bool   `toml:"enabled"`
-	ServerKey    string `toml:"server_key"`
-	ClientKey    string `toml:"client_key"`
-	IsProduction bool   `toml:"is_production"`
+	Enabled      bool     `toml:"enabled"`
+	ServerKey    string   `toml:"server_key"`
+	ClientKey    string   `toml:"client_key"`
+	IsProduction bool     `toml:"is_production"`
+	AllowedIPs   []string `toml:"allowed_ips"` // empty = accept all; set to Midtrans official IPs in production
 }
 
 type XenditConfig struct {
-	Enabled      bool   `toml:"enabled"`
-	SecretKey    string `toml:"secret_key"`
-	WebhookToken string `toml:"webhook_token"`
-	CallbackURL  string `toml:"callback_url"`
+	Enabled      bool     `toml:"enabled"`
+	SecretKey    string   `toml:"secret_key"`
+	WebhookToken string   `toml:"webhook_token"`
+	CallbackURL  string   `toml:"callback_url"`
+	AllowedIPs   []string `toml:"allowed_ips"` // empty = accept all; set to Xendit official IPs in production
 }
 
 type DokuConfig struct {
-	Enabled       bool   `toml:"enabled"`
-	ClientID      string `toml:"client_id"`
-	SecretKey     string `toml:"secret_key"`
-	APIKey        string `toml:"api_key"`
-	PrivateKeyPEM string `toml:"private_key"`
-	IsProduction  bool   `toml:"is_production"`
+	Enabled       bool     `toml:"enabled"`
+	ClientID      string   `toml:"client_id"`
+	SecretKey     string   `toml:"secret_key"`
+	APIKey        string   `toml:"api_key"`
+	PrivateKeyPEM string   `toml:"private_key"`
+	IsProduction  bool     `toml:"is_production"`
+	AllowedIPs    []string `toml:"allowed_ips"` // empty = accept all; set to DOKU official IPs in production
+}
+
+type IPaymuConfig struct {
+	Enabled       bool     `toml:"enabled"`
+	APIKey        string   `toml:"api_key"`
+	VA            string   `toml:"va"`
+	IsProduction  bool     `toml:"is_production"`
+	NotifyURL     string   `toml:"notify_url"`
+	WebhookSecret string   `toml:"webhook_secret"`
+	AllowedIPs    []string `toml:"allowed_ips"` // empty = accept all; set to iPaymu official IPs in production
 }
 
 // FeeConfig holds platform-wide margin settings applied on top of each merchant's FeeConfig.

@@ -186,16 +186,24 @@ func (a *App) Run() error {
 	// HTTP routes
 	e.GET("/health", healthHandler(db, c))
 
+	webhookAllowedIPs := map[string][]string{
+		"midtrans": cfg.Provider.Midtrans.AllowedIPs,
+		"xendit":   cfg.Provider.Xendit.AllowedIPs,
+		"doku":     cfg.Provider.Doku.AllowedIPs,
+		"ipaymu":   cfg.Provider.IPaymu.AllowedIPs,
+	}
 	deliveryHTTP.Register(e, deliveryHTTP.Routes{
-		MerchantRepo: merchantRepo,
-		Cache:        c,
-		Payment:      handler.NewPaymentHandler(paymentUC),
-		Disbursement: handler.NewDisbursementHandler(disbursementUC),
-		Mutation:     handler.NewMutationHandler(mutationUC),
-		Merchant:     handler.NewMerchantHandler(merchantUC),
-		Webhook:      handler.NewWebhookHandler(paymentUC, disbursementUC),
-		Admin:          handler.NewAdminHandler(adminUC),
-		AdminJWTSecret: cfg.Admin.JWTSecret,
+		MerchantRepo:      merchantRepo,
+		Cache:             c,
+		Payment:           handler.NewPaymentHandler(paymentUC),
+		Disbursement:      handler.NewDisbursementHandler(disbursementUC),
+		Mutation:          handler.NewMutationHandler(mutationUC),
+		Merchant:          handler.NewMerchantHandler(merchantUC),
+		Webhook:           handler.NewWebhookHandler(paymentUC, disbursementUC),
+		Admin:             handler.NewAdminHandler(adminUC),
+		AdminJWTSecret:    cfg.Admin.JWTSecret,
+		WebhookAllowedIPs: webhookAllowedIPs,
+		Log:               log,
 	})
 
 	// Outbox worker

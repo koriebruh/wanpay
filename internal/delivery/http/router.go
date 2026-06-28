@@ -2,6 +2,7 @@ package http
 
 import (
 	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 
 	"wanpey/core/internal/delivery/http/handler"
 	httpmw "wanpey/core/internal/delivery/http/middleware"
@@ -12,15 +13,17 @@ import (
 
 // Routes holds all route handlers and shared middleware dependencies.
 type Routes struct {
-	MerchantRepo   repository.MerchantRepository
-	Cache          cache.Cache
-	Payment        *handler.PaymentHandler
-	Disbursement   *handler.DisbursementHandler
-	Mutation       *handler.MutationHandler
-	Merchant       *handler.MerchantHandler
-	Webhook        *handler.WebhookHandler
-	Admin          *handler.AdminHandler
-	AdminJWTSecret string
+	MerchantRepo         repository.MerchantRepository
+	Cache                cache.Cache
+	Payment              *handler.PaymentHandler
+	Disbursement         *handler.DisbursementHandler
+	Mutation             *handler.MutationHandler
+	Merchant             *handler.MerchantHandler
+	Webhook              *handler.WebhookHandler
+	Admin                *handler.AdminHandler
+	AdminJWTSecret    string
+	WebhookAllowedIPs map[string][]string // provider → CIDRs; empty = accept all
+	Log               *zap.Logger
 }
 
 // Register mounts all API routes on the Echo instance.
@@ -29,7 +32,11 @@ func Register(e *echo.Echo, r Routes) {
 	idempotency := httpmw.Idempotency(r.Cache)
 
 	// Webhook routes — no auth, provider signs payload
+	// IP allowlist is applied when WebhookAllowedIPs is configured (defense-in-depth).
 	webhooks := e.Group("/webhooks")
+	if len(r.WebhookAllowedIPs) > 0 && r.Log != nil {
+		webhooks.Use(httpmw.WebhookIPAllowlist(r.WebhookAllowedIPs, r.Log))
+	}
 	webhooks.POST("/:provider/payment", r.Webhook.HandlePaymentWebhook)
 	webhooks.POST("/:provider/disbursement", r.Webhook.HandleDisbursementWebhook)
 
