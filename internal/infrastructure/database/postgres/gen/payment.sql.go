@@ -25,7 +25,7 @@ func (q *Queries) CountPaymentsByMerchant(ctx context.Context, merchantID string
 }
 
 const getPaymentByExternalID = `-- name: GetPaymentByExternalID :one
-SELECT id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
+SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata, provider_payment_id FROM payments
 WHERE provider = $1 AND external_id = $2
 `
 
@@ -41,7 +41,6 @@ func (q *Queries) GetPaymentByExternalID(ctx context.Context, arg GetPaymentByEx
 		&i.ID,
 		&i.MerchantID,
 		&i.ExternalID,
-		&i.ProviderPaymentID,
 		&i.Method,
 		&i.Provider,
 		&i.Status,
@@ -63,12 +62,13 @@ func (q *Queries) GetPaymentByExternalID(ctx context.Context, arg GetPaymentByEx
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Metadata,
+		&i.ProviderPaymentID,
 	)
 	return i, err
 }
 
 const getPaymentByID = `-- name: GetPaymentByID :one
-SELECT id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
+SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata, provider_payment_id FROM payments
 WHERE id = $1
 `
 
@@ -79,7 +79,6 @@ func (q *Queries) GetPaymentByID(ctx context.Context, id string) (Payment, error
 		&i.ID,
 		&i.MerchantID,
 		&i.ExternalID,
-		&i.ProviderPaymentID,
 		&i.Method,
 		&i.Provider,
 		&i.Status,
@@ -101,6 +100,7 @@ func (q *Queries) GetPaymentByID(ctx context.Context, id string) (Payment, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Metadata,
+		&i.ProviderPaymentID,
 	)
 	return i, err
 }
@@ -118,7 +118,7 @@ INSERT INTO payments (
     $11, $12, $13,
     $14, $15, $16, $17,
     $18, $19
-) RETURNING id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata
+) RETURNING id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata, provider_payment_id
 `
 
 type InsertPaymentParams struct {
@@ -170,7 +170,6 @@ func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (P
 		&i.ID,
 		&i.MerchantID,
 		&i.ExternalID,
-		&i.ProviderPaymentID,
 		&i.Method,
 		&i.Provider,
 		&i.Status,
@@ -192,12 +191,13 @@ func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Metadata,
+		&i.ProviderPaymentID,
 	)
 	return i, err
 }
 
 const listPaymentsByMerchant = `-- name: ListPaymentsByMerchant :many
-SELECT id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata FROM payments
+SELECT id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata, provider_payment_id FROM payments
 WHERE merchant_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -222,7 +222,6 @@ func (q *Queries) ListPaymentsByMerchant(ctx context.Context, arg ListPaymentsBy
 			&i.ID,
 			&i.MerchantID,
 			&i.ExternalID,
-			&i.ProviderPaymentID,
 			&i.Method,
 			&i.Provider,
 			&i.Status,
@@ -244,6 +243,7 @@ func (q *Queries) ListPaymentsByMerchant(ctx context.Context, arg ListPaymentsBy
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Metadata,
+			&i.ProviderPaymentID,
 		); err != nil {
 			return nil, err
 		}
@@ -267,7 +267,7 @@ SET status             = $2,
     cancelled_at       = $6,
     updated_at         = NOW()
 WHERE id = $1
-RETURNING id, merchant_id, external_id, provider_payment_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata
+RETURNING id, merchant_id, external_id, method, provider, status, amount, fee_amount, currency, description, customer_name, customer_email, customer_phone, va_number, bank_code, qr_string, qr_image_url, expiry_at, paid_at, failed_at, cancelled_at, created_at, updated_at, metadata, provider_payment_id
 `
 
 type UpdatePaymentStatusParams struct {
@@ -293,7 +293,6 @@ func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStat
 		&i.ID,
 		&i.MerchantID,
 		&i.ExternalID,
-		&i.ProviderPaymentID,
 		&i.Method,
 		&i.Provider,
 		&i.Status,
@@ -315,6 +314,7 @@ func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStat
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Metadata,
+		&i.ProviderPaymentID,
 	)
 	return i, err
 }

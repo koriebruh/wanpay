@@ -91,7 +91,7 @@ func (r *adminRepo) Update(ctx context.Context, a *entity.Admin) error {
 }
 
 func (r *adminRepo) UpdatePassword(ctx context.Context, id, hash string) error {
-	if err := r.queries(ctx).UpdateAdminPassword(ctx, id, hash); err != nil {
+	if err := r.queries(ctx).UpdateAdminPassword(ctx, gen.UpdateAdminPasswordParams{ID: id, PasswordHash: hash}); err != nil {
 		return fmt.Errorf("update admin password: %w", err)
 	}
 	return nil

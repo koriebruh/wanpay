@@ -64,7 +64,8 @@ type Merchant struct {
 	Status            MerchantStatus
 	APIKey            string // SHA256 hash of the raw key
 	WebhookURL        string // Wanpey POSTs payment events here
-	WebhookSecret     string // SHA256 hash; used to sign outbound webhook payloads via HMAC-SHA256
+	WebhookSecret     string // SHA256 hash stored for reference; not used for signing
+	WebhookSigningKey string // raw HMAC-SHA256 key for signing outbound webhook payloads
 	FeeConfig         FeeConfig
 	DailyCashoutLimit int64      // IDR; 0 = unlimited
 	DeletedAt         *time.Time // nil = active record; soft delete only, never hard-delete

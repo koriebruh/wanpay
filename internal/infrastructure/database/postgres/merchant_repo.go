@@ -37,14 +37,15 @@ func (r *merchantRepo) Save(ctx context.Context, m *entity.Merchant) error {
 		return fmt.Errorf("marshal fee_config: %w", err)
 	}
 	row, err := r.queries(ctx).InsertMerchant(ctx, gen.InsertMerchantParams{
-		Name:          m.Name,
-		Email:         m.Email,
-		Phone:         m.Phone,
-		Status:        string(m.Status),
-		ApiKey:        m.APIKey,
-		WebhookUrl:    m.WebhookURL,
-		WebhookSecret: m.WebhookSecret,
-		FeeConfig:     feeJSON,
+		Name:             m.Name,
+		Email:            m.Email,
+		Phone:            m.Phone,
+		Status:           string(m.Status),
+		ApiKey:           m.APIKey,
+		WebhookUrl:       m.WebhookURL,
+		WebhookSecret:    m.WebhookSecret,
+		WebhookSigningKey: m.WebhookSigningKey,
+		FeeConfig:        feeJSON,
 	})
 	if err != nil {
 		return fmt.Errorf("insert merchant: %w", err)
@@ -102,6 +103,7 @@ func (r *merchantRepo) Update(ctx context.Context, m *entity.Merchant) error {
 		ApiKey:            m.APIKey,
 		WebhookUrl:        m.WebhookURL,
 		WebhookSecret:     m.WebhookSecret,
+		WebhookSigningKey: m.WebhookSigningKey,
 		FeeConfig:         feeJSON,
 		DailyCashoutLimit: m.DailyCashoutLimit,
 	})
@@ -233,7 +235,7 @@ func (r *merchantRepo) List(ctx context.Context, f repository.ListMerchantFilter
 	page, limit := normalizePage(f.Page, f.Limit)
 	listArgs := append(args, int32(limit), int32((page-1)*limit)) //nolint:gocritic,gosec
 	query := fmt.Sprintf(
-		"SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, fee_config, daily_cashout_limit, deleted_at, created_at, updated_at FROM merchants%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		"SELECT id, name, email, phone, status, api_key, webhook_url, webhook_secret, webhook_signing_key, fee_config, daily_cashout_limit, deleted_at, created_at, updated_at FROM merchants%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
 		where, idx, idx+1,
 	)
 
@@ -248,7 +250,7 @@ func (r *merchantRepo) List(ctx context.Context, f repository.ListMerchantFilter
 		var m gen.Merchant
 		if err := rows.Scan(
 			&m.ID, &m.Name, &m.Email, &m.Phone, &m.Status,
-			&m.ApiKey, &m.WebhookUrl, &m.WebhookSecret, &m.FeeConfig,
+			&m.ApiKey, &m.WebhookUrl, &m.WebhookSecret, &m.WebhookSigningKey, &m.FeeConfig,
 			&m.DailyCashoutLimit, &m.DeletedAt, &m.CreatedAt, &m.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan merchant: %w", err)

@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"wanpey/core/internal/infrastructure/database"
+	"wanpey/core/pkg/signature"
 )
 
 const (
@@ -28,12 +29,13 @@ const (
 )
 
 type outboxRow struct {
-	ID        string
-	EventType string
-	Payload   json.RawMessage
-	TargetURL string
-	Attempt   int
-	Max       int
+	ID         string
+	EventType  string
+	Payload    json.RawMessage
+	TargetURL  string
+	MerchantID string
+	Attempt    int
+	Max        int
 }
 
 type OutboxWorker struct {
@@ -113,7 +115,7 @@ func (w *OutboxWorker) fetchAndClaim(ctx context.Context) ([]outboxRow, error) {
 			LIMIT 10
 			FOR UPDATE SKIP LOCKED
 		)
-		RETURNING id, event_type, payload, target_url, attempt_count, max_attempts`
+		RETURNING id, event_type, payload, target_url, merchant_id, attempt_count, max_attempts`
 
 	lease := fmt.Sprintf("%d seconds", int(outboxClaimLease.Seconds()))
 	rows, err := w.db.QueryContext(ctx, q, lease)
@@ -125,8 +127,12 @@ func (w *OutboxWorker) fetchAndClaim(ctx context.Context) ([]outboxRow, error) {
 	var result []outboxRow
 	for rows.Next() {
 		var r outboxRow
-		if err := rows.Scan(&r.ID, &r.EventType, &r.Payload, &r.TargetURL, &r.Attempt, &r.Max); err != nil {
+		var merchantID sql.NullString
+		if err := rows.Scan(&r.ID, &r.EventType, &r.Payload, &r.TargetURL, &merchantID, &r.Attempt, &r.Max); err != nil {
 			return nil, err
+		}
+		if merchantID.Valid {
+			r.MerchantID = merchantID.String
 		}
 		result = append(result, r)
 	}
@@ -155,7 +161,7 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 		return
 	}
 
-	err := w.post(ctx, row.TargetURL, row.Payload)
+	err := w.post(ctx, row)
 	if err == nil {
 		if updateErr := w.markDelivered(dbCtx, row.ID); updateErr != nil {
 			log.Error("outbox: mark delivered failed", zap.Error(updateErr))
@@ -182,12 +188,34 @@ func (w *OutboxWorker) deliver(ctx context.Context, row outboxRow) {
 	}
 }
 
-func (w *OutboxWorker) post(ctx context.Context, rawURL string, payload json.RawMessage) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, bytes.NewReader(payload))
+func (w *OutboxWorker) post(ctx context.Context, row outboxRow) error {
+	// Inject delivery_id into the payload envelope so merchants can use it for idempotency.
+	var env map[string]json.RawMessage
+	if err := json.Unmarshal(row.Payload, &env); err == nil {
+		idJSON, _ := json.Marshal(row.ID)
+		env["delivery_id"] = idJSON
+		if b, err2 := json.Marshal(env); err2 == nil {
+			row.Payload = b
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, row.TargetURL, bytes.NewReader(row.Payload))
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Wanpey-Event", row.EventType)
+	req.Header.Set("X-Wanpey-Delivery-ID", row.ID)
+
+	if row.MerchantID != "" {
+		signingKey, err := w.fetchSigningKey(ctx, row.MerchantID)
+		if err != nil {
+			w.log.Warn("outbox: could not fetch signing key, sending unsigned", zap.String("merchant_id", row.MerchantID), zap.Error(err))
+		} else if signingKey != "" {
+			sig := signature.Sign([]byte(signingKey), row.Payload)
+			req.Header.Set("X-Wanpey-Signature", "sha256="+sig)
+		}
+	}
 
 	resp, err := w.httpClient.Do(req)
 	if err != nil {
@@ -199,6 +227,18 @@ func (w *OutboxWorker) post(ctx context.Context, rawURL string, payload json.Raw
 		return fmt.Errorf("non-2xx response: %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func (w *OutboxWorker) fetchSigningKey(ctx context.Context, merchantID string) (string, error) {
+	var key string
+	err := w.db.QueryRowContext(ctx,
+		`SELECT webhook_signing_key FROM merchants WHERE id = $1 AND deleted_at IS NULL`,
+		merchantID,
+	).Scan(&key)
+	if err != nil {
+		return "", err
+	}
+	return key, nil
 }
 
 func (w *OutboxWorker) markDelivered(ctx context.Context, id string) error {
@@ -263,7 +303,7 @@ func truncate(s string, max int) string {
 
 // InsertOutbox writes an outbox entry inside an existing DB transaction.
 // Must be called in the same tx as the payment status update to guarantee atomicity.
-func InsertOutbox(ctx context.Context, tx *sql.Tx, eventType, targetURL string, payload any) error {
+func InsertOutbox(ctx context.Context, tx *sql.Tx, eventType, targetURL, merchantID string, payload any) error {
 	if err := validateWebhookURL(targetURL); err != nil {
 		return fmt.Errorf("insecure target_url rejected: %w", err)
 	}
@@ -272,7 +312,7 @@ func InsertOutbox(ctx context.Context, tx *sql.Tx, eventType, targetURL string, 
 		return fmt.Errorf("marshal outbox payload: %w", err)
 	}
 	_, err = tx.ExecContext(ctx,
-		`INSERT INTO outbox (event_type, payload, target_url) VALUES ($1, $2, $3)`,
-		eventType, b, targetURL)
+		`INSERT INTO outbox (event_type, payload, target_url, merchant_id) VALUES ($1, $2, $3, $4)`,
+		eventType, b, targetURL, merchantID)
 	return err
 }

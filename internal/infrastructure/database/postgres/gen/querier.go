@@ -10,18 +10,13 @@ import (
 
 type Querier interface {
 	CountAdmins(ctx context.Context) (int64, error)
-	GetAdminByEmail(ctx context.Context, email string) (Admin, error)
-	GetAdminByID(ctx context.Context, id string) (Admin, error)
-	InsertAdmin(ctx context.Context, arg InsertAdminParams) (Admin, error)
-	ListAdmins(ctx context.Context, arg ListAdminsParams) ([]Admin, error)
-	UpdateAdmin(ctx context.Context, arg UpdateAdminParams) (Admin, error)
-	UpdateAdminLastLogin(ctx context.Context, id string) error
-	UpdateAdminPassword(ctx context.Context, id string, passwordHash string) error
 	CountBankAccounts(ctx context.Context, merchantID string) (int64, error)
 	CountDisbursementsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	CountMutationsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	CountPaymentsByMerchant(ctx context.Context, merchantID string) (int64, error)
 	DeleteBankAccount(ctx context.Context, id string) error
+	GetAdminByEmail(ctx context.Context, email string) (Admin, error)
+	GetAdminByID(ctx context.Context, id string) (Admin, error)
 	GetBankAccountByID(ctx context.Context, id string) (MerchantBankAccount, error)
 	GetDisbursementByExternalID(ctx context.Context, arg GetDisbursementByExternalIDParams) (Disbursement, error)
 	GetDisbursementByID(ctx context.Context, id string) (Disbursement, error)
@@ -35,6 +30,7 @@ type Querier interface {
 	GetPaymentByID(ctx context.Context, id string) (Payment, error)
 	GetPrimaryBankAccount(ctx context.Context, merchantID string) (MerchantBankAccount, error)
 	GetProviderBalance(ctx context.Context, provider string) (ProviderBalance, error)
+	InsertAdmin(ctx context.Context, arg InsertAdminParams) (Admin, error)
 	InsertBankAccount(ctx context.Context, arg InsertBankAccountParams) (MerchantBankAccount, error)
 	InsertDisbursement(ctx context.Context, arg InsertDisbursementParams) (Disbursement, error)
 	InsertMerchant(ctx context.Context, arg InsertMerchantParams) (Merchant, error)
@@ -43,6 +39,7 @@ type Querier interface {
 	InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error)
 	InsertPaymentAudit(ctx context.Context, arg InsertPaymentAuditParams) (PaymentAudit, error)
 	LeaseOutboxEvents(ctx context.Context, limit int32) ([]Outbox, error)
+	ListAdmins(ctx context.Context, arg ListAdminsParams) ([]Admin, error)
 	ListBankAccountsByMerchant(ctx context.Context, merchantID string) ([]MerchantBankAccount, error)
 	ListDisbursementsByMerchant(ctx context.Context, arg ListDisbursementsByMerchantParams) ([]Disbursement, error)
 	ListMutationsByMerchant(ctx context.Context, arg ListMutationsByMerchantParams) ([]Mutation, error)
@@ -59,6 +56,9 @@ type Querier interface {
 	// Used in balance checks to prevent double-spend before the provider confirms.
 	SumPendingDisbursements(ctx context.Context, merchantID string) (int64, error)
 	UnsetPrimaryBankAccounts(ctx context.Context, merchantID string) error
+	UpdateAdmin(ctx context.Context, arg UpdateAdminParams) (Admin, error)
+	UpdateAdminLastLogin(ctx context.Context, id string) error
+	UpdateAdminPassword(ctx context.Context, arg UpdateAdminPasswordParams) error
 	UpdateBankAccount(ctx context.Context, arg UpdateBankAccountParams) (MerchantBankAccount, error)
 	UpdateDisbursementStatus(ctx context.Context, arg UpdateDisbursementStatusParams) (Disbursement, error)
 	UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) (Merchant, error)

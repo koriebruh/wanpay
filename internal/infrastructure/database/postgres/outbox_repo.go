@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"wanpey/core/internal/infrastructure/database"
 	"wanpey/core/internal/infrastructure/database/postgres/gen"
 )
@@ -30,15 +32,16 @@ func (r *OutboxRepo) queries(ctx context.Context) *gen.Queries {
 
 // Insert adds an outbox event. Must be called inside database.RunInTx
 // alongside the status update it accompanies to guarantee atomicity.
-func (r *OutboxRepo) Insert(ctx context.Context, eventType, targetURL string, payload any) error {
+func (r *OutboxRepo) Insert(ctx context.Context, eventType, targetURL, merchantID string, payload any) error {
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal outbox payload: %w", err)
 	}
 	_, err = r.queries(ctx).InsertOutboxEvent(ctx, gen.InsertOutboxEventParams{
-		EventType: eventType,
-		Payload:   b,
-		TargetUrl: targetURL,
+		EventType:  eventType,
+		Payload:    b,
+		TargetUrl:  targetURL,
+		MerchantID: uuid.NullUUID{UUID: uuid.MustParse(merchantID), Valid: merchantID != ""},
 	})
 	if err != nil {
 		return fmt.Errorf("insert outbox event: %w", err)

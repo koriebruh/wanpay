@@ -9,22 +9,30 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const insertOutboxEvent = `-- name: InsertOutboxEvent :one
-INSERT INTO outbox (id, event_type, payload, target_url, next_retry_at)
-VALUES (gen_random_uuid(), $1, $2, $3, NOW())
-RETURNING id, event_type, payload, target_url, attempt_count, max_attempts, next_retry_at, delivered_at, failed_at, last_error, created_at
+INSERT INTO outbox (id, event_type, payload, target_url, merchant_id, next_retry_at)
+VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
+RETURNING id, event_type, payload, target_url, attempt_count, max_attempts, next_retry_at, delivered_at, failed_at, last_error, created_at, merchant_id
 `
 
 type InsertOutboxEventParams struct {
-	EventType string          `json:"event_type"`
-	Payload   json.RawMessage `json:"payload"`
-	TargetUrl string          `json:"target_url"`
+	EventType  string          `json:"event_type"`
+	Payload    json.RawMessage `json:"payload"`
+	TargetUrl  string          `json:"target_url"`
+	MerchantID uuid.NullUUID   `json:"merchant_id"`
 }
 
 func (q *Queries) InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (Outbox, error) {
-	row := q.db.QueryRowContext(ctx, insertOutboxEvent, arg.EventType, arg.Payload, arg.TargetUrl)
+	row := q.db.QueryRowContext(ctx, insertOutboxEvent,
+		arg.EventType,
+		arg.Payload,
+		arg.TargetUrl,
+		arg.MerchantID,
+	)
 	var i Outbox
 	err := row.Scan(
 		&i.ID,
@@ -38,12 +46,13 @@ func (q *Queries) InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventPa
 		&i.FailedAt,
 		&i.LastError,
 		&i.CreatedAt,
+		&i.MerchantID,
 	)
 	return i, err
 }
 
 const leaseOutboxEvents = `-- name: LeaseOutboxEvents :many
-SELECT id, event_type, payload, target_url, attempt_count, max_attempts, next_retry_at, delivered_at, failed_at, last_error, created_at FROM outbox
+SELECT id, event_type, payload, target_url, attempt_count, max_attempts, next_retry_at, delivered_at, failed_at, last_error, created_at, merchant_id FROM outbox
 WHERE delivered_at  IS NULL
   AND failed_at     IS NULL
   AND next_retry_at <= NOW()
@@ -74,6 +83,7 @@ func (q *Queries) LeaseOutboxEvents(ctx context.Context, limit int32) ([]Outbox,
 			&i.FailedAt,
 			&i.LastError,
 			&i.CreatedAt,
+			&i.MerchantID,
 		); err != nil {
 			return nil, err
 		}

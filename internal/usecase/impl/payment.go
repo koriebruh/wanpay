@@ -14,6 +14,7 @@ import (
 	"wanpey/core/internal/infrastructure/database/postgres"
 	"wanpey/core/internal/usecase"
 	"wanpey/core/pkg/apperror"
+	"wanpey/core/pkg/webhook"
 )
 
 type paymentUsecase struct {
@@ -280,8 +281,9 @@ func (u *paymentUsecase) HandleWebhook(ctx context.Context, provider entity.Prov
 		}); err != nil {
 			return err
 		}
+		fee := int64(0)
 		if p.Status == entity.PaymentStatusPaid {
-			fee := computeMethodFee(feeForMethod(merchant, p.Method), p.Amount)
+			fee = computeMethodFee(feeForMethod(merchant, p.Method), p.Amount)
 			if err := u.mutationRepo.Save(ctx, &entity.Mutation{
 				ReferenceID:   p.ID,
 				ReferenceType: entity.MutationRefPayment,
@@ -298,11 +300,26 @@ func (u *paymentUsecase) HandleWebhook(ctx context.Context, provider entity.Prov
 		if merchant.WebhookURL == "" {
 			return nil
 		}
-		return u.outboxRepo.Insert(ctx, "payment.status_changed", merchant.WebhookURL, map[string]any{
-			"event":      "payment." + string(p.Status),
-			"payment_id": p.ID,
-			"status":     p.Status,
-			"amount":     p.Amount,
+		eventType := "payment." + string(p.Status)
+		return u.outboxRepo.Insert(ctx, eventType, merchant.WebhookURL, merchant.ID, webhook.Payload{
+			EventType: eventType,
+			CreatedAt: time.Now(),
+			Data: webhook.PaymentData{
+				PaymentID:     p.ID,
+				ExternalID:    p.ExternalID,
+				MerchantID:    p.MerchantID,
+				Status:        string(p.Status),
+				Method:        string(p.Method),
+				Provider:      string(p.Provider),
+				Amount:        p.Amount,
+				FeeAmount:     fee,
+				NetAmount:     p.Amount - fee,
+				Currency:      string(p.Currency),
+				CustomerName:  p.CustomerName,
+				CustomerEmail: p.CustomerEmail,
+				PaidAt:        p.PaidAt,
+				CreatedAt:     p.CreatedAt,
+			},
 		})
 	})
 }

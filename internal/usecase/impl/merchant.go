@@ -41,14 +41,15 @@ func (u *merchantUsecase) Create(ctx context.Context, input usecase.CreateMercha
 	rawSecret, hashedSecret := generateSecret()
 
 	m := &entity.Merchant{
-		Name:          input.Name,
-		Email:         input.Email,
-		Phone:         input.Phone,
-		Status:        entity.MerchantStatusPending,
-		APIKey:        hashedKey,
-		WebhookURL:    input.WebhookURL,
-		WebhookSecret: hashedSecret,
-		FeeConfig:     input.FeeConfig,
+		Name:              input.Name,
+		Email:             input.Email,
+		Phone:             input.Phone,
+		Status:            entity.MerchantStatusPending,
+		APIKey:            hashedKey,
+		WebhookURL:        input.WebhookURL,
+		WebhookSecret:     hashedSecret,
+		WebhookSigningKey: rawSecret,
+		FeeConfig:         input.FeeConfig,
 	}
 	if err := u.merchantRepo.Save(ctx, m); err != nil {
 		return nil, fmt.Errorf("create merchant: %w", err)

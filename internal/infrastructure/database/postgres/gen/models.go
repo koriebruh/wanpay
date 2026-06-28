@@ -8,7 +8,20 @@ import (
 	"database/sql"
 	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+type Admin struct {
+	ID           string       `json:"id"`
+	Email        string       `json:"email"`
+	PasswordHash string       `json:"password_hash"`
+	Role         string       `json:"role"`
+	IsActive     bool         `json:"is_active"`
+	LastLoginAt  sql.NullTime `json:"last_login_at"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+}
 
 type Disbursement struct {
 	ID            string       `json:"id"`
@@ -44,6 +57,7 @@ type Merchant struct {
 	DeletedAt         sql.NullTime    `json:"deleted_at"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	WebhookSigningKey string          `json:"webhook_signing_key"`
 }
 
 type MerchantBankAccount struct {
@@ -83,13 +97,13 @@ type Outbox struct {
 	FailedAt     sql.NullTime    `json:"failed_at"`
 	LastError    sql.NullString  `json:"last_error"`
 	CreatedAt    time.Time       `json:"created_at"`
+	MerchantID   uuid.NullUUID   `json:"merchant_id"`
 }
 
 type Payment struct {
 	ID                string          `json:"id"`
 	MerchantID        string          `json:"merchant_id"`
 	ExternalID        string          `json:"external_id"`
-	ProviderPaymentID string          `json:"provider_payment_id"`
 	Method            string          `json:"method"`
 	Provider          string          `json:"provider"`
 	Status            string          `json:"status"`
@@ -111,6 +125,7 @@ type Payment struct {
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
 	Metadata          json.RawMessage `json:"metadata"`
+	ProviderPaymentID string          `json:"provider_payment_id"`
 }
 
 type PaymentAudit struct {

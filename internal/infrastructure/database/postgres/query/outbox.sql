@@ -1,6 +1,6 @@
 -- name: InsertOutboxEvent :one
-INSERT INTO outbox (id, event_type, payload, target_url, next_retry_at)
-VALUES (gen_random_uuid(), $1, $2, $3, NOW())
+INSERT INTO outbox (id, event_type, payload, target_url, merchant_id, next_retry_at)
+VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
 RETURNING *;
 
 -- name: LeaseOutboxEvents :many

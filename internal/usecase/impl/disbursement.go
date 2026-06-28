@@ -14,6 +14,7 @@ import (
 	"wanpey/core/internal/infrastructure/database/postgres"
 	"wanpey/core/internal/usecase"
 	"wanpey/core/pkg/apperror"
+	"wanpey/core/pkg/webhook"
 )
 
 const lockMerchantSQL = `SELECT id FROM merchants WHERE id = $1 FOR UPDATE`
@@ -276,12 +277,26 @@ func (u *disbursementUsecase) HandleDisbursementCallback(ctx context.Context, pr
 		if merchant.WebhookURL == "" {
 			return nil
 		}
-		return u.outboxRepo.Insert(ctx, "disbursement.status_changed", merchant.WebhookURL, map[string]any{
-			"event":           "disbursement." + string(d.Status),
-			"disbursement_id": d.ID,
-			"status":          d.Status,
-			"amount":          d.Amount,
-			"failure_reason":  d.FailureReason,
+		eventType := "disbursement." + string(d.Status)
+		return u.outboxRepo.Insert(ctx, eventType, merchant.WebhookURL, merchant.ID, webhook.Payload{
+			EventType: eventType,
+			CreatedAt: time.Now(),
+			Data: webhook.DisbursementData{
+				DisbursementID: d.ID,
+				MerchantID:     d.MerchantID,
+				Status:         string(d.Status),
+				Provider:       string(d.Provider),
+				BankCode:       string(d.BankCode),
+				AccountNumber:  d.AccountNumber,
+				AccountName:    d.AccountName,
+				Amount:         d.Amount,
+				FeeAmount:      d.FeeAmount,
+				Currency:       string(d.Currency),
+				CompletedAt:    d.CompletedAt,
+				FailedAt:       d.FailedAt,
+				FailureReason:  d.FailureReason,
+				CreatedAt:      d.CreatedAt,
+			},
 		})
 	})
 }
