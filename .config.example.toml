@@ -78,15 +78,16 @@ secret_key = ""
 # Paste the contents of private_pkcs8.key here as a multi-line TOML string,
 # OR set the DOKU_PRIVATE_KEY_PEM environment variable (takes precedence over this field).
 # Using the env var is recommended in production so the key is never written to a config file.
-private_key_pem = """
+private_key = """
 """
 
 [provider.ipaymu]
-enabled       = false
-api_key       = ""
-va            = ""   # merchant VA number from iPaymu dashboard
-is_production = false
-notify_url    = ""   # webhook URL — iPaymu POSTs payment status here
+enabled        = false
+api_key        = ""
+va             = ""   # merchant VA number from iPaymu dashboard
+is_production  = false
+notify_url     = ""   # webhook URL — iPaymu POSTs payment status here
+webhook_secret = ""   # x-wt token header from iPaymu for verifying inbound webhook calls
 
 
 [otel]
@@ -115,3 +116,10 @@ percentage = 0.3   # 0.3% per QRIS transaction (on top of merchant's QRIS fee)
 type     = "flat"
 flat_idr = 1000    # IDR 1.000 per disbursement
 percentage = 0.0
+
+[admin]
+# HMAC-SHA256 secret for signing admin JWTs.
+# Use a strong random secret in production (min 32 chars).
+jwt_secret             = "change-me-min-32-chars-random-string"
+access_token_ttl_hours  = 8     # 8 hours default
+refresh_token_ttl_hours = 168   # 7 days default
