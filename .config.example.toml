@@ -75,7 +75,9 @@ secret_key = ""
 #   openssl genrsa -out private.key 2048
 #   openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private.key -out private_pkcs8.key
 # Then upload the public key to DOKU Dashboard > Integration > API Keys > Public Key.
-# Paste the contents of private_pkcs8.key here as a multi-line TOML string:
+# Paste the contents of private_pkcs8.key here as a multi-line TOML string,
+# OR set the DOKU_PRIVATE_KEY_PEM environment variable (takes precedence over this field).
+# Using the env var is recommended in production so the key is never written to a config file.
 private_key_pem = """
 """
 

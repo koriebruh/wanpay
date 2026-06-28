@@ -178,6 +178,13 @@ func Load() (*Config, error) {
 	if _, err := toml.DecodeFile(path, &cfg); err != nil {
 		return nil, fmt.Errorf("decode config %q: %w", path, err)
 	}
+
+	// T-21: DOKU private key can be supplied via env var instead of the config file.
+	// Env var takes precedence so secrets are never written to disk in production.
+	if v := os.Getenv("DOKU_PRIVATE_KEY_PEM"); v != "" {
+		cfg.Provider.Doku.PrivateKeyPEM = v
+	}
+
 	return &cfg, nil
 }
 
