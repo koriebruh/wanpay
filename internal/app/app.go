@@ -208,6 +208,12 @@ func (a *App) Run() error {
 		worker.NewOutboxWorker(db, log).Run(workerCtx)
 	}()
 
+	a.workerWg.Add(1)
+	go func() {
+		defer a.workerWg.Done()
+		worker.NewExpiryWorker(db, log).Run(workerCtx)
+	}()
+
 	// HTTP server
 	serverErr := make(chan error, 1)
 	go func() {
