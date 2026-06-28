@@ -105,6 +105,9 @@ func (u *paymentUsecase) CreateVA(ctx context.Context, input usecase.CreateVAInp
 		BankCode:          input.BankCode,
 		ExpiryAt:          resp.ExpiryAt,
 	}
+	if input.CallbackURL != "" {
+		p.Metadata = map[string]any{"callback_url": input.CallbackURL}
+	}
 	if err := u.savePaymentWithAudit(ctx, p, input.MerchantID); err != nil {
 		return nil, err
 	}
@@ -162,6 +165,9 @@ func (u *paymentUsecase) CreateQRIS(ctx context.Context, input usecase.CreateQRI
 		QRString:          resp.QRString,
 		QRImageURL:        resp.QRImageURL,
 		ExpiryAt:          resp.ExpiryAt,
+	}
+	if input.CallbackURL != "" {
+		p.Metadata = map[string]any{"callback_url": input.CallbackURL}
 	}
 	if err := u.savePaymentWithAudit(ctx, p, input.MerchantID); err != nil {
 		return nil, err
@@ -297,11 +303,15 @@ func (u *paymentUsecase) HandleWebhook(ctx context.Context, provider entity.Prov
 				return err
 			}
 		}
-		if merchant.WebhookURL == "" {
+		callbackURL := merchant.WebhookURL
+		if cb, ok := p.Metadata["callback_url"].(string); ok && cb != "" {
+			callbackURL = cb
+		}
+		if callbackURL == "" {
 			return nil
 		}
 		eventType := "payment." + string(p.Status)
-		return u.outboxRepo.Insert(ctx, eventType, merchant.WebhookURL, merchant.ID, webhook.Payload{
+		return u.outboxRepo.Insert(ctx, eventType, callbackURL, merchant.ID, webhook.Payload{
 			EventType: eventType,
 			CreatedAt: time.Now(),
 			Data: webhook.PaymentData{

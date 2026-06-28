@@ -18,6 +18,7 @@ type CreateVAInput struct {
 	CustomerPhone string          `json:"customer_phone" validate:"required,min=6,max=20"`
 	Description   string          `json:"description"    validate:"max=255"`
 	ExpiryAt      time.Time       `json:"expiry_at"      validate:"required"`
+	CallbackURL   string          `json:"callback_url"   validate:"omitempty,url,max=500"`
 }
 
 type CreateQRISInput struct {
@@ -30,6 +31,7 @@ type CreateQRISInput struct {
 	CustomerPhone string          `json:"customer_phone" validate:"required,min=6,max=20"`
 	Description   string          `json:"description"    validate:"max=255"`
 	ExpiryAt      time.Time       `json:"expiry_at"      validate:"required"`
+	CallbackURL   string          `json:"callback_url"   validate:"omitempty,url,max=500"`
 }
 
 type PaymentOutput struct {
