@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 
@@ -57,6 +58,26 @@ func (h *PaymentHandler) GetPayment(c echo.Context) error {
 	paymentID := c.Param("id")
 
 	out, err := h.uc.GetPayment(c.Request().Context(), merchantID, paymentID)
+	if err != nil {
+		return err
+	}
+	return response.OK(c, out)
+}
+
+func (h *PaymentHandler) ListPayments(c echo.Context) error {
+	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	out, err := h.uc.ListPayments(c.Request().Context(), usecase.ListPaymentsInput{
+		MerchantID: merchantID,
+		Status:     c.QueryParam("status"),
+		Provider:   c.QueryParam("provider"),
+		Method:     c.QueryParam("method"),
+		StartDate:  c.QueryParam("start_date"),
+		EndDate:    c.QueryParam("end_date"),
+		Page:       page,
+		Limit:      limit,
+	})
 	if err != nil {
 		return err
 	}

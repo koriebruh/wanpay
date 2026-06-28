@@ -3,6 +3,7 @@ package impl
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -172,6 +173,58 @@ func (u *disbursementUsecase) GetDisbursement(ctx context.Context, merchantID, d
 		return nil, apperror.NotFound("disbursement %s not found", disbursementID)
 	}
 	return toDisbursementOutput(d), nil
+}
+
+func (u *disbursementUsecase) ListDisbursements(ctx context.Context, input usecase.ListDisbursementsInput) (*usecase.DisbursementListOutput, error) {
+	page := input.Page
+	if page < 1 {
+		page = 1
+	}
+	limit := input.Limit
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	filter := repository.ListDisbursementFilter{
+		MerchantID: input.MerchantID,
+		Page:       page,
+		Limit:      limit,
+	}
+	if input.Status != "" {
+		s := entity.DisbursementStatus(input.Status)
+		filter.Status = &s
+	}
+	if input.StartDate != "" {
+		t, err := time.Parse("2006-01-02", input.StartDate)
+		if err == nil {
+			filter.StartDate = &t
+		}
+	}
+	if input.EndDate != "" {
+		t, err := time.Parse("2006-01-02", input.EndDate)
+		if err == nil {
+			filter.EndDate = &t
+		}
+	}
+
+	disbursements, total, err := u.disbursementRepo.List(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*usecase.DisbursementOutput, len(disbursements))
+	for i, d := range disbursements {
+		items[i] = toDisbursementOutput(d)
+	}
+	return &usecase.DisbursementListOutput{
+		Items: items,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	}, nil
 }
 
 func (u *disbursementUsecase) HandleDisbursementCallback(ctx context.Context, provider entity.Provider, headers map[string]string, body []byte) error {

@@ -53,10 +53,29 @@ type PaymentOutput struct {
 	CreatedAt     time.Time            `json:"created_at"`
 }
 
+type ListPaymentsInput struct {
+	MerchantID string
+	Status     string
+	Provider   string
+	Method     string
+	StartDate  string
+	EndDate    string
+	Page       int
+	Limit      int
+}
+
+type PaymentListOutput struct {
+	Items []*PaymentOutput `json:"items"`
+	Total int64            `json:"total"`
+	Page  int              `json:"page"`
+	Limit int              `json:"limit"`
+}
+
 type PaymentUsecase interface {
 	CreateVA(ctx context.Context, input CreateVAInput) (*PaymentOutput, error)
 	CreateQRIS(ctx context.Context, input CreateQRISInput) (*PaymentOutput, error)
 	GetPayment(ctx context.Context, merchantID, paymentID string) (*PaymentOutput, error)
 	CancelPayment(ctx context.Context, merchantID, paymentID string) error
 	HandleWebhook(ctx context.Context, provider entity.Provider, headers map[string]string, body []byte) error
+	ListPayments(ctx context.Context, input ListPaymentsInput) (*PaymentListOutput, error)
 }

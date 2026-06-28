@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/labstack/echo/v4"
 
 	"wanpey/core/internal/delivery/http/middleware"
@@ -31,6 +33,24 @@ func (h *DisbursementHandler) Disburse(c echo.Context) error {
 		return err
 	}
 	return response.Created(c, out)
+}
+
+func (h *DisbursementHandler) ListDisbursements(c echo.Context) error {
+	merchantID := c.Get(middleware.ContextKeyMerchantID).(string)
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	out, err := h.uc.ListDisbursements(c.Request().Context(), usecase.ListDisbursementsInput{
+		MerchantID: merchantID,
+		Status:     c.QueryParam("status"),
+		StartDate:  c.QueryParam("start_date"),
+		EndDate:    c.QueryParam("end_date"),
+		Page:       page,
+		Limit:      limit,
+	})
+	if err != nil {
+		return err
+	}
+	return response.OK(c, out)
 }
 
 func (h *DisbursementHandler) GetDisbursement(c echo.Context) error {

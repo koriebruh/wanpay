@@ -35,8 +35,25 @@ type DisbursementOutput struct {
 	CreatedAt     time.Time                 `json:"created_at"`
 }
 
+type ListDisbursementsInput struct {
+	MerchantID string
+	Status     string
+	StartDate  string
+	EndDate    string
+	Page       int
+	Limit      int
+}
+
+type DisbursementListOutput struct {
+	Items []*DisbursementOutput `json:"items"`
+	Total int64                 `json:"total"`
+	Page  int                   `json:"page"`
+	Limit int                   `json:"limit"`
+}
+
 type DisbursementUsecase interface {
 	Disburse(ctx context.Context, input DisburseInput) (*DisbursementOutput, error)
 	GetDisbursement(ctx context.Context, merchantID, disbursementID string) (*DisbursementOutput, error)
 	HandleDisbursementCallback(ctx context.Context, provider entity.Provider, headers map[string]string, body []byte) error
+	ListDisbursements(ctx context.Context, input ListDisbursementsInput) (*DisbursementListOutput, error)
 }

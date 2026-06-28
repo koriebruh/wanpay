@@ -83,19 +83,6 @@ type MerchantListOutput struct {
 	Limit int               `json:"limit"`
 }
 
-type PaymentListOutput struct {
-	Items []*PaymentOutput `json:"items"`
-	Total int64            `json:"total"`
-	Page  int              `json:"page"`
-	Limit int              `json:"limit"`
-}
-
-type DisbursementListOutput struct {
-	Items []*DisbursementOutput `json:"items"`
-	Total int64                 `json:"total"`
-	Page  int                   `json:"page"`
-	Limit int                   `json:"limit"`
-}
 
 type AdminUsecase interface {
 	Login(ctx context.Context, input AdminLoginInput) (*AdminTokenOutput, error)

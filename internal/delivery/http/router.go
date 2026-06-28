@@ -38,6 +38,7 @@ func Register(e *echo.Echo, r Routes) {
 
 	// Payments
 	payments := v1.Group("/payments")
+	payments.GET("", r.Payment.ListPayments)
 	payments.POST("/va", r.Payment.CreateVA, idempotency)
 	payments.POST("/qris", r.Payment.CreateQRIS, idempotency)
 	payments.GET("/:id", r.Payment.GetPayment)
@@ -45,6 +46,7 @@ func Register(e *echo.Echo, r Routes) {
 
 	// Disbursements
 	disbursements := v1.Group("/disbursements")
+	disbursements.GET("", r.Disbursement.ListDisbursements)
 	disbursements.POST("", r.Disbursement.Disburse, idempotency)
 	disbursements.GET("/:id", r.Disbursement.GetDisbursement)
 

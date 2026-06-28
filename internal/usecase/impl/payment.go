@@ -307,6 +307,66 @@ func (u *paymentUsecase) HandleWebhook(ctx context.Context, provider entity.Prov
 	})
 }
 
+func (u *paymentUsecase) ListPayments(ctx context.Context, input usecase.ListPaymentsInput) (*usecase.PaymentListOutput, error) {
+	page := input.Page
+	if page < 1 {
+		page = 1
+	}
+	limit := input.Limit
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	filter := repository.ListPaymentFilter{
+		MerchantID: input.MerchantID,
+		Page:       page,
+		Limit:      limit,
+	}
+	if input.Status != "" {
+		s := entity.PaymentStatus(input.Status)
+		filter.Status = &s
+	}
+	if input.Provider != "" {
+		p := entity.Provider(input.Provider)
+		filter.Provider = &p
+	}
+	if input.Method != "" {
+		m := entity.PaymentMethod(input.Method)
+		filter.Method = &m
+	}
+	if input.StartDate != "" {
+		t, err := time.Parse("2006-01-02", input.StartDate)
+		if err == nil {
+			filter.StartDate = &t
+		}
+	}
+	if input.EndDate != "" {
+		t, err := time.Parse("2006-01-02", input.EndDate)
+		if err == nil {
+			filter.EndDate = &t
+		}
+	}
+
+	payments, total, err := u.paymentRepo.List(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*usecase.PaymentOutput, len(payments))
+	for i, p := range payments {
+		items[i] = toPaymentOutput(p)
+	}
+	return &usecase.PaymentListOutput{
+		Items: items,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	}, nil
+}
+
 func feeForMethod(m *entity.Merchant, method entity.PaymentMethod) entity.MethodFee {
 	switch method {
 	case entity.PaymentMethodVA:
