@@ -14,7 +14,9 @@ import (
 // externalID generates a unique payment/disbursement reference.
 func externalID() string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand unavailable: " + err.Error())
+	}
 	return fmt.Sprintf("wpay-%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
 }
 
@@ -22,7 +24,9 @@ func externalID() string {
 // Format: wpay_live_<32 random hex chars> | wpay_test_<32 random hex chars>
 func generateAPIKey(isProduction bool) (raw, hashed string) {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand unavailable: " + err.Error())
+	}
 	suffix := hex.EncodeToString(b)
 	prefix := "wpay_test_"
 	if isProduction {
@@ -37,7 +41,9 @@ func generateAPIKey(isProduction bool) (raw, hashed string) {
 // generateSecret returns (rawSecret, hashedSecret).
 func generateSecret() (raw, hashed string) {
 	b := make([]byte, 32)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand unavailable: " + err.Error())
+	}
 	raw = hex.EncodeToString(b)
 	h := sha256.Sum256([]byte(raw))
 	hashed = hex.EncodeToString(h[:])

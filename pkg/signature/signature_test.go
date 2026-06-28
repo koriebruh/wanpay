@@ -23,7 +23,9 @@ func TestSign_Verify_SHA256(t *testing.T) {
 func TestSign_SHA256_Deterministic(t *testing.T) {
 	key := []byte("key")
 	msg := []byte("msg")
-	if Sign(key, msg) != Sign(key, msg) {
+	sig1 := Sign(key, msg)
+	sig2 := Sign(key, msg)
+	if sig1 != sig2 {
 		t.Error("Sign not deterministic — HMAC must be")
 	}
 }
@@ -78,7 +80,9 @@ func TestSign_Verify_SHA512(t *testing.T) {
 func TestSign_SHA512_Deterministic(t *testing.T) {
 	key := []byte("k")
 	msg := []byte("m")
-	if SignSHA512(key, msg) != SignSHA512(key, msg) {
+	sig1 := SignSHA512(key, msg)
+	sig2 := SignSHA512(key, msg)
+	if sig1 != sig2 {
 		t.Error("SignSHA512 not deterministic")
 	}
 }

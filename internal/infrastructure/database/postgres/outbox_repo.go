@@ -89,7 +89,7 @@ func (r *OutboxRepo) ListByMerchant(ctx context.Context, merchantID string, page
 	}
 	rows, err := r.q.ListOutboxByMerchant(ctx, gen.ListOutboxByMerchantParams{
 		MerchantID: uuid.NullUUID{UUID: mid, Valid: true},
-		Limit:      int32(limit),  //nolint:gosec
+		Limit:      int32(limit),              //nolint:gosec
 		Offset:     int32((page - 1) * limit), //nolint:gosec
 	})
 	if err != nil {

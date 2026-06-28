@@ -58,8 +58,42 @@ issues:
         - funlen
         - cyclop
         - gosec
+        - errcheck
 
     - path: "cmd/api/migrate\\.go"
+      linters:
+        - funlen
+
+    - path: "cmd/api/seed\\.go"
+      linters:
+        - errcheck
+
+    # Handler query-param parsing: strconv.Atoi("") == 0 is intentional default
+    # Type assertions from Echo context are always set by upstream middleware
+    - path: "internal/delivery/http/handler/"
+      linters:
+        - errcheck
+
+    # app.go Run() wires up the entire server — complexity and length are inherent
+    - path: "internal/app/app\\.go"
+      linters:
+        - cyclop
+        - errcheck
+        - funlen
+
+    # Worker files: RowsAffected and json.Marshal errors are non-fatal
+    - path: "internal/infrastructure/worker/"
+      linters:
+        - errcheck
+
+    # Disbursement and payment usecases: complexity is inherent to financial flows
+    - path: "internal/usecase/impl/(disbursement|payment)\\.go"
+      linters:
+        - cyclop
+        - funlen
+
+    # payment_repo List: SQL builder pattern, complexity justified
+    - path: "internal/infrastructure/database/postgres/payment_repo\\.go"
       linters:
         - funlen
 

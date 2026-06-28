@@ -54,8 +54,8 @@ func TestCreate_APIKeyPrefix_Sandbox(t *testing.T) {
 	uc := newMerchantUC(&stubMerchantRepo{}, &stubMutationRepo{}, &stubOutboxRepo{})
 
 	out, err := uc.Create(context.Background(), usecase.CreateMerchantInput{
-		Name:       "Sandbox Merchant",
-		Email:      "sandbox@example.com",
+		Name:         "Sandbox Merchant",
+		Email:        "sandbox@example.com",
 		IsProduction: false,
 	})
 	if err != nil {

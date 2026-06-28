@@ -147,6 +147,8 @@ func (r *FeeResolver) merchantFee(
 		if !isZeroFee(merchant.FeeConfig.QRIS) {
 			return merchant.FeeConfig.QRIS, "merchant_contract", nil
 		}
+	case entity.PaymentMethodCC:
+		// CC not yet supported — fall through to global default
 	}
 	// Fall through to global default
 	def, err := r.feeRepo.GetDefault(ctx)
@@ -158,6 +160,8 @@ func (r *FeeResolver) merchantFee(
 		return def.VA, "global_default", nil
 	case entity.PaymentMethodQRIS:
 		return def.QRIS, "global_default", nil
+	case entity.PaymentMethodCC:
+		// CC not yet supported
 	}
 	return entity.MethodFee{}, "global_default", nil
 }
@@ -168,6 +172,8 @@ func (r *FeeResolver) marginFee(m *entity.PlatformMargin, method entity.PaymentM
 		return m.VA
 	case entity.PaymentMethodQRIS:
 		return m.QRIS
+	case entity.PaymentMethodCC:
+		// CC not yet supported
 	}
 	return entity.MethodFee{}
 }

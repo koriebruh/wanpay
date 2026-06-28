@@ -17,14 +17,14 @@ import (
 
 // Routes holds all route handlers and shared middleware dependencies.
 type Routes struct {
-	MerchantRepo         repository.MerchantRepository
-	Cache                cache.Cache
-	Payment              *handler.PaymentHandler
-	Disbursement         *handler.DisbursementHandler
-	Mutation             *handler.MutationHandler
-	Merchant             *handler.MerchantHandler
-	Webhook              *handler.WebhookHandler
-	Admin                *handler.AdminHandler
+	MerchantRepo      repository.MerchantRepository
+	Cache             cache.Cache
+	Payment           *handler.PaymentHandler
+	Disbursement      *handler.DisbursementHandler
+	Mutation          *handler.MutationHandler
+	Merchant          *handler.MerchantHandler
+	Webhook           *handler.WebhookHandler
+	Admin             *handler.AdminHandler
 	AdminJWTSecret    string
 	WebhookAllowedIPs map[string][]string // provider → CIDRs; empty = accept all
 	Log               *zap.Logger

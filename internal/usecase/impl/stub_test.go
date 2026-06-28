@@ -27,7 +27,10 @@ var registerOnce sync.Once
 
 func newStubSQLDB() *sql.DB {
 	registerOnce.Do(func() { sql.Register("noop", noopDriver{}) })
-	db, _ := sql.Open("noop", "")
+	db, err := sql.Open("noop", "")
+	if err != nil {
+		panic("noop driver: " + err.Error())
+	}
 	return db
 }
 
@@ -42,18 +45,18 @@ type noopRows struct{ done bool }
 
 func (noopDriver) Open(_ string) (driver.Conn, error)  { return noopConn{}, nil }
 func (noopConn) Prepare(_ string) (driver.Stmt, error) { return noopStmt{}, nil }
-func (noopConn) Close() error                           { return nil }
-func (noopConn) Begin() (driver.Tx, error)              { return noopTx{}, nil }
-func (noopTx) Commit() error                            { return nil }
-func (noopTx) Rollback() error                          { return nil }
-func (noopStmt) Close() error                           { return nil }
-func (noopStmt) NumInput() int                          { return -1 }
+func (noopConn) Close() error                          { return nil }
+func (noopConn) Begin() (driver.Tx, error)             { return noopTx{}, nil }
+func (noopTx) Commit() error                           { return nil }
+func (noopTx) Rollback() error                         { return nil }
+func (noopStmt) Close() error                          { return nil }
+func (noopStmt) NumInput() int                         { return -1 }
 func (noopStmt) Exec(_ []driver.Value) (driver.Result, error) {
 	return driver.RowsAffected(1), nil
 }
 func (noopStmt) Query(_ []driver.Value) (driver.Rows, error) { return &noopRows{}, nil }
-func (*noopRows) Columns() []string                           { return []string{"id"} }
-func (*noopRows) Close() error                                { return nil }
+func (*noopRows) Columns() []string                          { return []string{"id"} }
+func (*noopRows) Close() error                               { return nil }
 func (r *noopRows) Next(dest []driver.Value) error {
 	if r.done {
 		return io.EOF
@@ -81,22 +84,22 @@ func (s *stubOutboxRepo) ListByMerchant(_ context.Context, _ string, _, _ int) (
 // ── stubMerchantRepo ──────────────────────────────────────────────────────────
 
 type stubMerchantRepo struct {
-	merchant      *entity.Merchant
-	findByIDErr   error
-	findByEmailM  *entity.Merchant // nil = not found
-	findByEmailE  error
-	saveErr       error
-	updateErr     error
+	merchant     *entity.Merchant
+	findByIDErr  error
+	findByEmailM *entity.Merchant // nil = not found
+	findByEmailE error
+	saveErr      error
+	updateErr    error
 
-	bankAccount       *entity.MerchantBankAccount
-	bankAccounts      []*entity.MerchantBankAccount
-	bankAccountErr    error
-	bankCount         int
-	bankCountErr      error
-	saveBankErr       error
-	updateBankErr     error
-	deleteBankErr     error
-	unsetPrimaryErr   error
+	bankAccount     *entity.MerchantBankAccount
+	bankAccounts    []*entity.MerchantBankAccount
+	bankAccountErr  error
+	bankCount       int
+	bankCountErr    error
+	saveBankErr     error
+	updateBankErr   error
+	deleteBankErr   error
+	unsetPrimaryErr error
 }
 
 func (s *stubMerchantRepo) FindByID(_ context.Context, _ string) (*entity.Merchant, error) {
@@ -225,14 +228,14 @@ func (s *stubMutationRepo) GetBalance(_ context.Context, _ string) (int64, error
 // ── stubDisbursementRepo ──────────────────────────────────────────────────────
 
 type stubDisbursementRepo struct {
-	disbursement   *entity.Disbursement
-	findErr        error
-	saveErr        error
-	updateErr      error
-	pendingTotal   int64
-	pendingErr     error
-	todayTotal     int64
-	todayErr       error
+	disbursement *entity.Disbursement
+	findErr      error
+	saveErr      error
+	updateErr    error
+	pendingTotal int64
+	pendingErr   error
+	todayTotal   int64
+	todayErr     error
 }
 
 func (s *stubDisbursementRepo) Save(_ context.Context, d *entity.Disbursement) error {
@@ -303,7 +306,7 @@ func (s *stubPaymentGateway) CreateQRIS(_ context.Context, req gateway.CreateQRI
 		ExpiryAt:   req.ExpiryAt,
 	}, nil
 }
-func (s *stubPaymentGateway) CancelPayment(_ context.Context, _ string) error   { return s.cancelErr }
+func (s *stubPaymentGateway) CancelPayment(_ context.Context, _ string) error { return s.cancelErr }
 func (s *stubPaymentGateway) GetStatus(_ context.Context, _ string) (entity.PaymentStatus, error) {
 	return entity.PaymentStatusPending, nil
 }

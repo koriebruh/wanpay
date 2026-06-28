@@ -44,7 +44,10 @@ func AdminJWTAuth(secret string) echo.MiddlewareFunc {
 func RequireRole(roles ...entity.AdminRole) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			role, _ := c.Get(ContextKeyAdminRole).(string)
+			role, ok := c.Get(ContextKeyAdminRole).(string)
+			if !ok {
+				return apperror.Forbidden("insufficient role")
+			}
 			for _, r := range roles {
 				if string(r) == role {
 					return next(c)

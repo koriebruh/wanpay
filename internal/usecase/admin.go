@@ -84,7 +84,6 @@ type MerchantListOutput struct {
 	Limit int               `json:"limit"`
 }
 
-
 type AdminUsecase interface {
 	Login(ctx context.Context, input AdminLoginInput) (*AdminTokenOutput, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*AdminTokenOutput, error)

@@ -52,9 +52,9 @@ const (
 // Status transitions: pending → paid | expired | failed | cancelled.
 // Once in a final state (IsFinal), the record must not be mutated — append payment_audits instead.
 type Payment struct {
-	ID            string
-	MerchantID    string
-	ExternalID    string // our reference ID sent to the provider
+	ID         string
+	MerchantID string
+	ExternalID string // our reference ID sent to the provider
 	// ProviderPaymentID is the provider's own internal payment ID.
 	// Xendit: payment_request_id (needed for cancel/status). iPaymu: session_id.
 	// Distinct from ExternalID (which we generate). Empty for Midtrans (uses ExternalID).
@@ -92,6 +92,8 @@ func (p *Payment) IsFinal() bool {
 	switch p.Status {
 	case PaymentStatusPaid, PaymentStatusExpired, PaymentStatusFailed, PaymentStatusCancelled:
 		return true
+	case PaymentStatusPending, PaymentStatusCancelling:
+		return false
 	}
 	return false
 }

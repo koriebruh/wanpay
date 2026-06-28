@@ -95,7 +95,6 @@ type ProviderConfig struct {
 	CircuitBreaker CircuitBreakerConfig `toml:"circuit_breaker"`
 }
 
-
 type CircuitBreakerConfig struct {
 	MaxRequests         uint32 `toml:"max_requests"`         // max requests in half-open state
 	IntervalSeconds     int    `toml:"interval_seconds"`     // rolling window for failure counting

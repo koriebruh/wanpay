@@ -39,10 +39,10 @@ const (
 // Surcharge is additive, not a replacement.
 type FeeHoliday struct {
 	ID        string
-	Name      string      // e.g. "Idul Fitri 1446H"
-	Date      time.Time   // DATE only (no time component)
+	Name      string    // e.g. "Idul Fitri 1446H"
+	Date      time.Time // DATE only (no time component)
 	Type      HolidayType
-	Surcharge MethodFee   // additional fee for ALL methods on this date
+	Surcharge MethodFee // additional fee for ALL methods on this date
 	IsActive  bool
 	CreatedBy string // admin_id
 	UpdatedBy string // admin_id
@@ -54,8 +54,8 @@ type FeeHoliday struct {
 // Records are append-only; never updated or deleted.
 type FeeAuditLog struct {
 	ID         string
-	EntityType string         // "global_default" | "merchant_fee" | "platform_margin" | "holiday_surcharge"
-	EntityID   string         // merchant_id, holiday_id, or "singleton"
+	EntityType string // "global_default" | "merchant_fee" | "platform_margin" | "holiday_surcharge"
+	EntityID   string // merchant_id, holiday_id, or "singleton"
 	AdminID    string
 	AdminEmail string         // denormalized for readability without a join
 	OldValue   map[string]any // nil for first-time creation
@@ -65,8 +65,8 @@ type FeeAuditLog struct {
 }
 
 const (
-	FeeAuditEntityGlobalDefault   = "global_default"
-	FeeAuditEntityMerchantFee     = "merchant_fee"
-	FeeAuditEntityPlatformMargin  = "platform_margin"
+	FeeAuditEntityGlobalDefault    = "global_default"
+	FeeAuditEntityMerchantFee      = "merchant_fee"
+	FeeAuditEntityPlatformMargin   = "platform_margin"
 	FeeAuditEntityHolidaySurcharge = "holiday_surcharge"
 )

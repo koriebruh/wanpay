@@ -40,9 +40,9 @@ type envelope struct {
 
 // SuccessResponse is the exported shape used by Swagger annotations.
 type SuccessResponse struct {
-	Success bool   `json:"success" example:"true"`
-	Data    any    `json:"data"`
-	Meta    Meta   `json:"meta"`
+	Success bool `json:"success" example:"true"`
+	Data    any  `json:"data"`
+	Meta    Meta `json:"meta"`
 }
 
 // ErrorResponse is the exported shape used by Swagger annotations.
@@ -54,9 +54,9 @@ type ErrorResponse struct {
 
 // ListResponse is the exported shape for paginated list endpoints.
 type ListResponse struct {
-	Success bool       `json:"success" example:"true"`
-	Data    any        `json:"data"`
-	Meta    Meta       `json:"meta"`
+	Success bool `json:"success" example:"true"`
+	Data    any  `json:"data"`
+	Meta    Meta `json:"meta"`
 }
 
 func meta(c echo.Context) Meta {

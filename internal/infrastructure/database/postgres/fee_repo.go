@@ -53,10 +53,10 @@ func (r *FeeRepo) UpdateDefault(ctx context.Context, f *entity.FeeDefault) error
 		return fmt.Errorf("marshal disbursement fee: %w", err)
 	}
 	row, err := r.queries(ctx).UpdateFeeDefault(ctx, gen.UpdateFeeDefaultParams{
-		Va:          vaJSON,
-		Qris:        qrisJSON,
+		Va:           vaJSON,
+		Qris:         qrisJSON,
 		Disbursement: disbJSON,
-		UpdatedBy:   f.UpdatedBy,
+		UpdatedBy:    f.UpdatedBy,
 	})
 	if err != nil {
 		return fmt.Errorf("update fee default: %w", err)
@@ -171,8 +171,8 @@ func (r *FeeRepo) ListHolidays(ctx context.Context, page, limit int) ([]*entity.
 		return nil, 0, fmt.Errorf("count holidays: %w", err)
 	}
 	rows, err := r.q.ListFeeHolidays(ctx, gen.ListFeeHolidaysParams{
-		Limit:  int32(limit),                    //nolint:gosec
-		Offset: int32((page - 1) * limit),       //nolint:gosec
+		Limit:  int32(limit),              //nolint:gosec
+		Offset: int32((page - 1) * limit), //nolint:gosec
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("list holidays: %w", err)

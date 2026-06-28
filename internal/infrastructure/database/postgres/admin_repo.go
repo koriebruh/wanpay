@@ -109,8 +109,8 @@ func (r *adminRepo) List(ctx context.Context, page, limit int) ([]*entity.Admin,
 	}
 
 	rows, err := r.queries(ctx).ListAdmins(ctx, gen.ListAdminsParams{
-		Limit:  int32(limit),                 //nolint:gosec // capped by normalizePage
-		Offset: int32((page - 1) * limit),    //nolint:gosec
+		Limit:  int32(limit),              //nolint:gosec // capped by normalizePage
+		Offset: int32((page - 1) * limit), //nolint:gosec
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("list admins: %w", err)

@@ -451,4 +451,3 @@ func (u *paymentUsecase) ListPayments(ctx context.Context, input usecase.ListPay
 		Limit: limit,
 	}, nil
 }
-

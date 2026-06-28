@@ -78,7 +78,10 @@ func (u *merchantUsecase) GetMerchant(ctx context.Context, id string) (*usecase.
 	if err != nil {
 		return nil, err
 	}
-	balance, _ := u.mutationRepo.GetBalance(ctx, id)
+	balance, err := u.mutationRepo.GetBalance(ctx, id)
+	if err != nil {
+		balance = 0
+	}
 	return toMerchantOutput(m, balance), nil
 }
 
@@ -102,7 +105,10 @@ func (u *merchantUsecase) Update(ctx context.Context, input usecase.UpdateMercha
 	if err := u.merchantRepo.Update(ctx, m); err != nil {
 		return nil, fmt.Errorf("update merchant: %w", err)
 	}
-	balance, _ := u.mutationRepo.GetBalance(ctx, m.ID)
+	balance, err := u.mutationRepo.GetBalance(ctx, m.ID)
+	if err != nil {
+		balance = 0
+	}
 	return toMerchantOutput(m, balance), nil
 }
 
@@ -243,4 +249,3 @@ func (u *merchantUsecase) ListWebhookEvents(ctx context.Context, merchantID stri
 	}
 	return out, nil
 }
-

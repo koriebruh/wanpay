@@ -14,11 +14,11 @@ import (
 // stubFeeRepo implements repository.FeeRepository for unit tests.
 // Only GetDefault, GetMargin, and GetHolidayByDate are exercised by FeeResolver.
 type stubFeeRepo struct {
-	def          *entity.FeeDefault
-	margin       *entity.PlatformMargin
-	holiday      *entity.FeeHoliday // nil = no holiday
-	defaultErr   error
-	marginErr    error
+	def        *entity.FeeDefault
+	margin     *entity.PlatformMargin
+	holiday    *entity.FeeHoliday // nil = no holiday
+	defaultErr error
+	marginErr  error
 }
 
 func (s *stubFeeRepo) GetDefault(ctx context.Context) (*entity.FeeDefault, error) {
@@ -29,7 +29,7 @@ func (s *stubFeeRepo) GetMargin(ctx context.Context) (*entity.PlatformMargin, er
 	return s.margin, s.marginErr
 }
 func (s *stubFeeRepo) UpdateMargin(ctx context.Context, m *entity.PlatformMargin) error { return nil }
-func (s *stubFeeRepo) CreateHoliday(ctx context.Context, h *entity.FeeHoliday) error   { return nil }
+func (s *stubFeeRepo) CreateHoliday(ctx context.Context, h *entity.FeeHoliday) error    { return nil }
 func (s *stubFeeRepo) GetHolidayByDate(ctx context.Context, date time.Time) (*entity.FeeHoliday, error) {
 	if s.holiday == nil {
 		return nil, errors.New("no holiday")

@@ -13,36 +13,36 @@ type Payload struct {
 
 // PaymentData is Data when EventType is "payment.*".
 type PaymentData struct {
-	PaymentID     string    `json:"payment_id"`
-	ExternalID    string    `json:"external_id"`
-	MerchantID    string    `json:"merchant_id"`
-	Status        string    `json:"status"`
-	Method        string    `json:"method"`
-	Provider      string    `json:"provider"`
-	Amount        int64     `json:"amount"`
-	FeeAmount     int64     `json:"fee_amount"`
-	NetAmount     int64     `json:"net_amount"`
-	Currency      string    `json:"currency"`
-	CustomerName  string    `json:"customer_name"`
-	CustomerEmail string    `json:"customer_email"`
+	PaymentID     string     `json:"payment_id"`
+	ExternalID    string     `json:"external_id"`
+	MerchantID    string     `json:"merchant_id"`
+	Status        string     `json:"status"`
+	Method        string     `json:"method"`
+	Provider      string     `json:"provider"`
+	Amount        int64      `json:"amount"`
+	FeeAmount     int64      `json:"fee_amount"`
+	NetAmount     int64      `json:"net_amount"`
+	Currency      string     `json:"currency"`
+	CustomerName  string     `json:"customer_name"`
+	CustomerEmail string     `json:"customer_email"`
 	PaidAt        *time.Time `json:"paid_at,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
+	CreatedAt     time.Time  `json:"created_at"`
 }
 
 // DisbursementData is Data when EventType is "disbursement.*".
 type DisbursementData struct {
-	DisbursementID string    `json:"disbursement_id"`
-	MerchantID     string    `json:"merchant_id"`
-	Status         string    `json:"status"`
-	Provider       string    `json:"provider"`
-	BankCode       string    `json:"bank_code"`
-	AccountNumber  string    `json:"account_number"`
-	AccountName    string    `json:"account_name"`
-	Amount         int64     `json:"amount"`
-	FeeAmount      int64     `json:"fee_amount"`
-	Currency       string    `json:"currency"`
+	DisbursementID string     `json:"disbursement_id"`
+	MerchantID     string     `json:"merchant_id"`
+	Status         string     `json:"status"`
+	Provider       string     `json:"provider"`
+	BankCode       string     `json:"bank_code"`
+	AccountNumber  string     `json:"account_number"`
+	AccountName    string     `json:"account_name"`
+	Amount         int64      `json:"amount"`
+	FeeAmount      int64      `json:"fee_amount"`
+	Currency       string     `json:"currency"`
 	CompletedAt    *time.Time `json:"completed_at,omitempty"`
 	FailedAt       *time.Time `json:"failed_at,omitempty"`
-	FailureReason  string    `json:"failure_reason,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
+	FailureReason  string     `json:"failure_reason,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
