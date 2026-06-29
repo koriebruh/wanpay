@@ -195,7 +195,7 @@ func seedPayments(ctx context.Context, db database.SQLDB) error {
 		id, merchantID, externalID, method, provider, status string
 		amount, fee                                          int64
 		desc, customerName, customerEmail, customerPhone     string
-		vaNumber, bankCode, qrString                        string
+		vaNumber, bankCode, qrString                         string
 		expiryAt                                             time.Time
 		paidAt                                               *time.Time
 	}
