@@ -11,7 +11,7 @@ require (
 	github.com/hibiken/asynq v0.26.0
 	github.com/labstack/echo/v4 v4.15.4
 	github.com/lib/pq v1.12.3
-	github.com/redis/go-redis/v9 v9.20.1
+	github.com/redis/go-redis/v9 v9.21.0
 	github.com/samber/do/v2 v2.0.0
 	github.com/sevlyar/go-daemon v0.1.6
 	github.com/sony/gobreaker v1.0.0
