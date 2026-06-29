@@ -195,7 +195,7 @@ func seedPayments(ctx context.Context, db database.SQLDB) error {
 		id, merchantID, externalID, method, provider, status string
 		amount, fee                                          int64
 		desc, customerName, customerEmail, customerPhone     string
-		vaNumber, bankCode                                   string
+		vaNumber, bankCode, qrString                        string
 		expiryAt                                             time.Time
 		paidAt                                               *time.Time
 	}
@@ -206,7 +206,7 @@ func seedPayments(ctx context.Context, db database.SQLDB) error {
 			"wpay-seed-va-001", "va", "midtrans", "paid",
 			500000, 4000, "Order #SEED-001",
 			"Budi Santoso", "budi@example.com", "081234567890",
-			"8023123456789", "BCA",
+			"8023123456789", "BCA", "",
 			now.Add(24 * time.Hour), &paid1,
 		},
 		{
@@ -215,7 +215,7 @@ func seedPayments(ctx context.Context, db database.SQLDB) error {
 			"wpay-seed-qris-001", "qris", "xendit", "paid",
 			250000, 1750, "Order #SEED-002",
 			"Siti Rahayu", "siti@example.com", "082345678901",
-			"", "",
+			"", "", "00020101021226570011ID.CO.XENDIT.WWW011893600914000000000000021540000000000000204000053037605802ID5910TokoAlpha6007Jakarta6304SEED",
 			now.Add(15 * time.Minute), &paid2,
 		},
 		{
@@ -224,7 +224,7 @@ func seedPayments(ctx context.Context, db database.SQLDB) error {
 			"wpay-seed-va-002", "va", "midtrans", "pending",
 			1000000, 0, "Order #SEED-003",
 			"Ahmad Fauzi", "ahmad@example.com", "083456789012",
-			"7001987654321", "MANDIRI",
+			"7001987654321", "MANDIRI", "",
 			now.Add(24 * time.Hour), nil,
 		},
 		{
@@ -233,7 +233,7 @@ func seedPayments(ctx context.Context, db database.SQLDB) error {
 			"wpay-seed-va-003", "va", "doku", "expired",
 			750000, 0, "Order #SEED-004",
 			"Dewi Kusuma", "dewi@example.com", "084567890123",
-			"3331234567890", "BNI",
+			"3331234567890", "BNI", "",
 			now.Add(-2 * time.Hour), nil,
 		},
 	}
@@ -246,13 +246,13 @@ func seedPayments(ctx context.Context, db database.SQLDB) error {
 				customer_name, customer_email, customer_phone,
 				va_number, bank_code, qr_string, qr_image_url,
 				expiry_at, paid_at, metadata
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'IDR',$9,$10,$11,$12,$13,$14,'','',
-				$15,$16,'{}')
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'IDR',$9,$10,$11,$12,$13,$14,$15,'',
+				$16,$17,'{}')
 			ON CONFLICT DO NOTHING`,
 			r.id, r.merchantID, r.externalID, r.method, r.provider, r.status,
 			r.amount, r.fee, r.desc,
 			r.customerName, r.customerEmail, r.customerPhone,
-			r.vaNumber, r.bankCode,
+			r.vaNumber, r.bankCode, r.qrString,
 			r.expiryAt, r.paidAt,
 		); err != nil {
 			return err

@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wanpey — Live API Dashboard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400;500;700&display=swap');
+:root{
+  --bg:#0a0a0a;--surface:#111;--surface2:#1a1a1a;--border:#fff;
+  --text:#fff;--muted:#888;--dim:#333;
+  --y:#FFE600;--c:#00FFCC;--r:#FF3B3B;--g:#39FF14;--o:#FF6B00;--p:#C77DFF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+
+/* CONNECT OVERLAY */
+#connect-screen{
+  position:fixed;inset:0;background:#000;z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+}
+.connect-box{
+  border:3px solid var(--border);padding:32px;width:480px;
+  box-shadow:8px 8px 0 var(--y);background:var(--surface);
+}
+.connect-box h1{
+  font-family:'Space Mono',monospace;font-size:24px;font-weight:700;
+  color:var(--y);text-transform:uppercase;letter-spacing:-1px;
+  margin-bottom:4px;border-left:5px solid var(--y);padding-left:12px;
+}
+.connect-box p{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:20px;padding-left:17px}
+.role-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.role-opt{
+  border:2px solid var(--dim);padding:12px;cursor:pointer;
+  font-family:'Space Mono',monospace;font-size:11px;font-weight:700;
+  text-transform:uppercase;text-align:center;transition:all .08s;
+}
+.role-opt:hover{border-color:var(--muted);color:var(--text)}
+.role-opt.selected{border-color:var(--y);color:var(--y);background:rgba(255,230,0,.06);box-shadow:3px 3px 0 var(--y)}
+.role-opt .role-icon{font-size:20px;display:block;margin-bottom:4px}
+.connect-field{margin-bottom:14px}
+.connect-field label{display:block;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.connect-field input{width:100%;background:#000;border:2px solid var(--dim);padding:9px 12px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;outline:none}
+.connect-field input:focus{border-color:var(--y)}
+.connect-err{font-family:'Space Mono',monospace;font-size:11px;color:var(--r);border:1px solid var(--r);padding:8px;background:rgba(255,59,59,.06);margin-bottom:12px;display:none}
+.connect-err.show{display:block}
+.btn-connect{
+  width:100%;padding:12px;background:var(--y);color:#000;border:2px solid var(--y);
+  font-family:'Space Mono',monospace;font-size:13px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;cursor:pointer;
+  box-shadow:4px 4px 0 var(--border);transition:all .08s;
+}
+.btn-connect:hover{box-shadow:5px 5px 0 var(--border);transform:translate(-1px,-1px)}
+.btn-connect:active{transform:translate(2px,2px);box-shadow:none}
+.btn-connect:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:4px 4px 0 var(--border)}
+.divider{height:1px;background:var(--dim);margin:16px 0}
+
+/* HEADER */
+header{flex-shrink:0;background:#000;border-bottom:3px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:16px;height:56px;z-index:200}
+.logo{font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--y);letter-spacing:-1px;white-space:nowrap;text-transform:uppercase}
+.logo span{color:#fff}
+.header-role{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:4px 12px;border:2px solid;font-weight:700}
+.header-role.super_admin{color:var(--p);border-color:var(--p);background:rgba(199,125,255,.08)}
+.header-role.ops{color:var(--c);border-color:var(--c);background:rgba(0,255,204,.06)}
+.header-role.finance{color:var(--y);border-color:var(--y);background:rgba(255,230,0,.06)}
+.header-role.merchant{color:var(--g);border-color:var(--g);background:rgba(57,255,20,.06)}
+.top-badge{font-family:'Space Mono',monospace;font-size:10px;padding:4px 10px;border:2px solid;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.tb-jwt{color:var(--p);border-color:var(--p);background:rgba(199,125,255,.08)}
+.tb-apikey{color:var(--g);border-color:var(--g);background:rgba(57,255,20,.06)}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn-logout{font-family:'Space Mono',monospace;font-size:10px;padding:4px 10px;border:2px solid var(--dim);color:var(--muted);cursor:pointer;background:transparent;text-transform:uppercase}
+.btn-logout:hover{border-color:var(--r);color:var(--r)}
+.base-url-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--dim);border:1px solid var(--dim);padding:3px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* LAYOUT */
+.app{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+aside{width:210px;flex-shrink:0;background:#000;border-right:3px solid var(--border);overflow-y:auto;padding:0}
+.scat{padding:10px 14px 6px;font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--y);font-weight:700;border-bottom:1px solid var(--dim)}
+.snav{display:block;padding:9px 14px;color:var(--muted);cursor:pointer;border-left:4px solid transparent;font-size:12px;font-weight:500;transition:all .08s;border-bottom:1px solid var(--dim);font-family:'Space Mono',monospace}
+.snav:hover{color:var(--text);background:var(--surface);border-left-color:var(--muted)}
+.snav.active{color:var(--y);border-left-color:var(--y);background:rgba(255,230,0,.06);font-weight:700}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:24px 28px;background:var(--bg)}
+.page{display:none}
+.page.active{display:block}
+
+/* API LOG */
+.api-log{width:290px;flex-shrink:0;background:#000;border-left:3px solid var(--border);display:flex;flex-direction:column}
+.api-log-head{padding:10px 14px;border-bottom:3px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.api-log-head h3{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--y);text-transform:uppercase;letter-spacing:2px}
+.log-clear{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;background:none;border:1px solid var(--dim);padding:2px 8px;text-transform:uppercase}
+.log-clear:hover{color:var(--text);border-color:var(--muted)}
+.log-entries{flex:1;overflow-y:auto;padding:0}
+.log-empty{padding:24px 14px;color:var(--muted);font-size:11px;text-align:center;line-height:1.8;font-family:'Space Mono',monospace}
+.log-entry{padding:8px 12px;border-bottom:1px solid var(--dim);cursor:pointer}
+.log-entry:hover{background:var(--surface)}
+.le-top{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.le-method{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:2px 5px;min-width:48px;text-align:center;border:1px solid;text-transform:uppercase}
+.le-method.GET{color:var(--c);border-color:var(--c);background:rgba(0,255,204,.07)}
+.le-method.POST{color:var(--g);border-color:var(--g);background:rgba(57,255,20,.07)}
+.le-method.PATCH{color:var(--o);border-color:var(--o);background:rgba(255,107,0,.07)}
+.le-method.PUT{color:var(--o);border-color:var(--o);background:rgba(255,107,0,.07)}
+.le-method.DELETE{color:var(--r);border-color:var(--r);background:rgba(255,59,59,.07)}
+.le-path{font-family:'Space Mono',monospace;font-size:10px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.le-status{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0}
+.le-status.ok{color:var(--g)}.le-status.err{color:var(--r)}
+.le-desc{font-size:11px;color:var(--muted);margin-top:1px}
+.le-time{font-family:'Space Mono',monospace;font-size:9px;color:var(--dim);float:right}
+.log-body{display:none;background:#000;border:1px solid var(--dim);margin:6px 0 2px;padding:8px;font-family:'Space Mono',monospace;font-size:10px;line-height:1.6;color:#ccc;max-height:160px;overflow:auto;white-space:pre}
+.log-entry.open .log-body{display:block}
+
+/* PAGE */
+.page-title{font-family:'Space Mono',monospace;font-size:22px;font-weight:700;margin-bottom:2px;text-transform:uppercase;letter-spacing:-0.5px;border-left:5px solid var(--y);padding-left:12px}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:20px;padding-left:17px;font-family:'Space Mono',monospace}
+
+/* CARD */
+.card{background:var(--surface);border:2px solid var(--border);padding:16px;margin-bottom:16px;position:relative;box-shadow:4px 4px 0 var(--y)}
+.card-title{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;color:var(--y);border-bottom:1px solid var(--dim);padding-bottom:8px}
+
+/* STAT */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--surface);border:2px solid var(--border);padding:14px;cursor:pointer;transition:all .08s;box-shadow:3px 3px 0 #333}
+.stat:hover{box-shadow:4px 4px 0 var(--y);transform:translate(-1px,-1px);border-color:var(--y)}
+.stat-val{font-family:'Space Mono',monospace;font-size:26px;font-weight:700;margin-bottom:4px;color:var(--y)}
+.stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.stat-ep{font-family:'Space Mono',monospace;font-size:9px;color:var(--c);margin-top:8px;border-top:1px solid var(--dim);padding-top:5px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px 10px;font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--y);border-bottom:2px solid var(--border);font-weight:700;background:#000}
+td{padding:9px 10px;border-bottom:1px solid var(--dim);vertical-align:middle}
+tr:hover td{background:rgba(255,230,0,.02)}
+
+/* STATUS */
+.status{display:inline-block;padding:2px 8px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;text-transform:uppercase;border:1px solid;letter-spacing:.5px}
+.s-active,.s-paid,.s-completed,.s-verified{color:var(--g);border-color:var(--g);background:rgba(57,255,20,.07)}
+.s-pending,.s-processing{color:var(--o);border-color:var(--o);background:rgba(255,107,0,.07)}
+.s-suspended,.s-failed,.s-cancelled{color:var(--r);border-color:var(--r);background:rgba(255,59,59,.07)}
+.s-expired{color:var(--muted);border-color:var(--muted);background:rgba(136,136,136,.07)}
+.s-inactive{color:var(--dim);border-color:var(--dim)}
+
+/* BUTTONS */
+.btn{padding:6px 14px;border:2px solid;cursor:pointer;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;transition:all .08s;display:inline-flex;align-items:center;gap:5px;position:relative}
+.btn:active{transform:translate(2px,2px);box-shadow:none!important}
+.btn-primary{background:var(--y);color:#000;border-color:var(--y);box-shadow:3px 3px 0 var(--border)}.btn-primary:hover{box-shadow:4px 4px 0 var(--border);transform:translate(-1px,-1px)}
+.btn-success{background:transparent;color:var(--g);border-color:var(--g);box-shadow:3px 3px 0 var(--g)}.btn-success:hover{background:rgba(57,255,20,.1);box-shadow:4px 4px 0 var(--g);transform:translate(-1px,-1px)}
+.btn-warn{background:transparent;color:var(--o);border-color:var(--o);box-shadow:3px 3px 0 var(--o)}.btn-warn:hover{background:rgba(255,107,0,.1);box-shadow:4px 4px 0 var(--o);transform:translate(-1px,-1px)}
+.btn-danger{background:transparent;color:var(--r);border-color:var(--r);box-shadow:3px 3px 0 var(--r)}.btn-danger:hover{background:rgba(255,59,59,.1);box-shadow:4px 4px 0 var(--r);transform:translate(-1px,-1px)}
+.btn-ghost{background:transparent;color:var(--muted);border-color:var(--dim);box-shadow:2px 2px 0 var(--dim)}.btn-ghost:hover{color:var(--text);border-color:var(--muted);box-shadow:3px 3px 0 var(--muted);transform:translate(-1px,-1px)}
+.btn-sm{padding:3px 10px;font-size:10px}
+.action-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+
+/* MODAL */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:center;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--surface);border:3px solid var(--border);padding:24px;width:440px;max-height:85vh;overflow-y:auto;box-shadow:8px 8px 0 var(--y)}
+.modal h2{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:-0.5px;border-left:4px solid var(--y);padding-left:10px}
+.modal-ep{font-family:'Space Mono',monospace;font-size:10px;background:#000;padding:6px 10px;border:1px solid var(--c);color:var(--c);margin:10px 0 14px;letter-spacing:.3px}
+label{display:block;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;margin-top:12px}
+input,select{width:100%;background:#000;border:2px solid var(--dim);padding:7px 10px;color:var(--text);font-size:13px;font-family:'Space Mono',monospace;outline:none;transition:border-color .08s}
+input:focus,select:focus{border-color:var(--y);box-shadow:2px 2px 0 var(--y)}
+select option{background:#111}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:2px solid var(--dim)}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:310px;background:#000;border:3px solid;padding:10px 16px;font-family:'Space Mono',monospace;font-size:12px;z-index:600;transform:translateY(60px);opacity:0;transition:all .2s;max-width:320px;text-transform:uppercase;letter-spacing:.5px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:var(--g);color:var(--g);box-shadow:4px 4px 0 var(--g)}
+.toast.error{border-color:var(--r);color:var(--r);box-shadow:4px 4px 0 var(--r)}
+
+/* ROLE WALL */
+.role-wall{background:rgba(255,59,59,.05);border:2px solid var(--r);padding:16px;color:var(--r);font-size:13px;margin-bottom:16px;box-shadow:4px 4px 0 var(--r)}
+.role-wall strong{color:#fff}
+.role-wall code{font-family:'Space Mono',monospace;background:rgba(255,59,59,.1);padding:1px 6px;font-size:11px;border:1px solid var(--r)}
+
+/* MISC */
+.tag{display:inline-block;padding:2px 8px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2);color:var(--muted);border:1px solid var(--dim)}
+.idr{font-family:'Space Mono',monospace;font-weight:700}
+.prov{display:inline-block;padding:2px 8px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;border:1px solid}
+.prov-midtrans{color:var(--c);border-color:var(--c);background:rgba(0,255,204,.06)}
+.prov-xendit{color:var(--p);border-color:var(--p);background:rgba(199,125,255,.06)}
+.prov-doku{color:var(--o);border-color:var(--o);background:rgba(255,107,0,.06)}
+.prov-ipaymu{color:var(--g);border-color:var(--g);background:rgba(57,255,20,.06)}
+.mb{display:inline-block;padding:2px 7px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;border:1px solid}
+.mb-va{color:var(--c);border-color:var(--c);background:rgba(0,255,204,.06)}
+.mb-qris{color:var(--p);border-color:var(--p);background:rgba(199,125,255,.06)}
+
+/* LOADING */
+.loading{text-align:center;padding:30px;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted)}
+.loading::after{content:'...';animation:dots 1.2s infinite}
+@keyframes dots{0%,20%{content:'.'}40%,60%{content:'..'}80%,100%{content:'...'}}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:40px;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted)}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#000}
+::-webkit-scrollbar-thumb{background:var(--dim)}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ── CONNECT SCREEN ── -->
+<div id="connect-screen">
+  <div class="connect-box">
+    <h1>WAN<span>PEY</span></h1>
+    <p>// Live API Dashboard — connect ke backend</p>
+
+    <div class="connect-field">
+      <label>Base URL</label>
+      <input id="base-url" value="http://localhost:8080" placeholder="http://localhost:8080">
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Pilih Role</div>
+    <div class="role-select-grid">
+      <div class="role-opt selected" data-r="super_admin" onclick="selectRole('super_admin')">
+        <span class="role-icon">⚡</span>SUPER ADMIN
+      </div>
+      <div class="role-opt" data-r="ops" onclick="selectRole('ops')">
+        <span class="role-icon">🔧</span>OPS
+      </div>
+      <div class="role-opt" data-r="finance" onclick="selectRole('finance')">
+        <span class="role-icon">💰</span>FINANCE
+      </div>
+      <div class="role-opt" data-r="merchant" onclick="selectRole('merchant')">
+        <span class="role-icon">🏪</span>MERCHANT
+      </div>
+    </div>
+
+    <!-- Admin fields -->
+    <div id="admin-fields">
+      <div class="connect-field">
+        <label>Email Admin</label>
+        <input id="login-email" value="admin@wanpey.dev" placeholder="admin@wanpey.dev">
+      </div>
+      <div class="connect-field">
+        <label>Password</label>
+        <input id="login-pass" type="password" value="Admin123!" placeholder="password">
+      </div>
+    </div>
+
+    <!-- Merchant fields -->
+    <div id="merchant-fields" style="display:none">
+      <div class="connect-field">
+        <label>API Key Merchant</label>
+        <input id="api-key-input" placeholder="wpay_test_alpha000000000000000001">
+      </div>
+    </div>
+
+    <div class="connect-err" id="connect-err"></div>
+
+    <button class="btn-connect" id="btn-connect" onclick="doConnect()">CONNECT →</button>
+  </div>
+</div>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">WAN<span>PEY</span></div>
+  <span id="header-role-badge" class="header-role super_admin">⚡ SUPER ADMIN</span>
+  <span id="auth-badge" class="top-badge tb-jwt">🛡️ BEARER JWT</span>
+  <div class="base-url-label" id="base-url-display">http://localhost:8080</div>
+  <div class="header-right">
+    <button class="btn-logout" onclick="logout()">↩ Logout</button>
+  </div>
+</header>
+
+<div class="app">
+<aside id="sidebar"></aside>
+
+<div class="content" id="content">
+
+  <!-- ── MERCHANT PAGES ── -->
+  <div class="page" id="page-m-overview">
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub" id="m-merchant-name">// loading...</div>
+    <div class="stat-grid">
+      <div class="stat" onclick="fetchBalance()">
+        <div class="stat-val idr" id="stat-balance">—</div>
+        <div class="stat-lbl">Saldo Tersedia</div>
+        <div class="stat-ep">GET /v1/mutations/balance</div>
+      </div>
+      <div class="stat" onclick="goTo('m-payments')">
+        <div class="stat-val" id="stat-payments">—</div>
+        <div class="stat-lbl">Total Payments</div>
+        <div class="stat-ep">GET /v1/payments</div>
+      </div>
+      <div class="stat" onclick="goTo('m-disbursements')">
+        <div class="stat-val" id="stat-disbs">—</div>
+        <div class="stat-lbl">Disbursements</div>
+        <div class="stat-ep">GET /v1/disbursements</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚡ Quick Actions</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openModal('m-va')">+ Buat VA Payment</button>
+        <button class="btn btn-primary" onclick="openModal('m-qris')">+ Buat QRIS</button>
+        <button class="btn btn-ghost" onclick="openModal('m-disb')">📤 Disbursement</button>
+        <button class="btn btn-ghost" onclick="goTo('m-profile')">🪪 Profil & Rekening</button>
+      </div>
+    </div>
+    <div class="card" id="m-profile-card">
+      <div class="card-title">Profil Merchant <span style="font-size:10px;font-weight:400;font-family:'Space Mono',monospace;color:var(--c)">GET /v1/merchants/me</span></div>
+      <div class="loading" id="m-profile-loading">Loading</div>
+      <table id="m-profile-table" style="display:none">
+        <tbody id="m-profile-tbody"></tbody>
+      </table>
+      <div style="margin-top:12px;display:flex;gap:8px" id="m-profile-actions" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="openModal('m-edit-profile')">Edit Profil</button>
+        <button class="btn btn-warn btn-sm" onclick="regenKey()">🔄 Regen API Key</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-m-payments">
+    <div class="page-title">Payments</div>
+    <div class="page-sub">Transaksi masuk merchant sendiri</div>
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="openModal('m-va')">+ Buat VA</button>
+      <button class="btn btn-primary" onclick="openModal('m-qris')">+ Buat QRIS</button>
+      <button class="btn btn-ghost btn-sm" onclick="fetchPayments()">↻ Refresh</button>
+      <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:var(--c)">GET /v1/payments</span>
+    </div>
+    <div class="card" style="padding:0">
+      <table><thead><tr><th>ID</th><th>Method</th><th>Provider</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="tb-m-payments"><tr><td colspan="6" class="loading">Loading</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-m-disbursements">
+    <div class="page-title">Disbursements</div>
+    <div class="page-sub">Penarikan dana ke rekening bank</div>
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="openModal('m-disb')">+ Buat Disbursement</button>
+      <button class="btn btn-ghost btn-sm" onclick="fetchDisbs()">↻ Refresh</button>
+      <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:var(--c)">GET /v1/disbursements</span>
+    </div>
+    <div class="card" style="padding:0">
+      <table><thead><tr><th>ID</th><th>Bank</th><th>Amount</th><th>Fee</th><th>Provider</th><th>Status</th></tr></thead>
+      <tbody id="tb-m-disbs"><tr><td colspan="6" class="loading">Loading</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-m-mutations">
+    <div class="page-title">Mutations & Balance</div>
+    <div class="page-sub">Riwayat perubahan saldo ledger</div>
+    <div class="stat-grid" style="grid-template-columns:1fr 1fr">
+      <div class="stat" onclick="fetchBalance()">
+        <div class="stat-val idr" id="mut-balance">—</div>
+        <div class="stat-lbl">Saldo Terkini</div>
+        <div class="stat-ep">GET /v1/mutations/balance</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="mut-total">—</div>
+        <div class="stat-lbl">Total Mutasi</div>
+        <div class="stat-ep">GET /v1/mutations</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <table><thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Waktu</th></tr></thead>
+      <tbody id="tb-m-mutations"><tr><td colspan="5" class="loading">Loading</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-m-profile">
+    <div class="page-title">Profil & Rekening Bank</div>
+    <div class="page-sub">Self-service merchant data</div>
+    <div class="card">
+      <div class="card-title">Profil <span style="font-size:10px;font-weight:400;font-family:'Space Mono',monospace;color:var(--c)">GET /v1/merchants/me</span></div>
+      <div id="m-profile-full-loading" class="loading">Loading</div>
+      <div id="m-profile-full" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="m-profile-grid"></div>
+        <button class="btn btn-ghost btn-sm" onclick="openModal('m-edit-profile')">Edit Profil</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Rekening Bank <span style="font-size:10px;font-weight:400;font-family:'Space Mono',monospace;color:var(--c)">GET /v1/merchants/me/bank-accounts</span></div>
+      <div id="m-bank-loading" class="loading">Loading</div>
+      <div id="m-bank-section" style="display:none">
+        <table style="margin-bottom:12px"><thead><tr><th>Bank</th><th>No. Rek</th><th>Nama</th><th>Status</th><th>Primary</th><th>Actions</th></tr></thead>
+        <tbody id="tb-m-banks"></tbody></table>
+        <button class="btn btn-primary btn-sm" onclick="openModal('m-add-bank')">+ Tambah Rekening</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">API Key <span style="font-size:10px;font-weight:400;font-family:'Space Mono',monospace;color:var(--c)">POST /v1/merchants/me/api-key/regenerate</span></div>
+      <div style="font-family:'Space Mono',monospace;background:#000;padding:10px;border:1px solid var(--dim);margin-bottom:10px;font-size:12px;color:var(--muted)">●●●●●●●●●●●●●●●●●●●● (tersimpan di sisi server)</div>
+      <button class="btn btn-warn btn-sm" onclick="regenKey()">🔄 Regenerate API Key</button>
+    </div>
+  </div>
+
+  <!-- ── ADMIN PAGES ── -->
+  <div class="page" id="page-a-overview">
+    <div class="page-title">Admin Dashboard</div>
+    <div class="page-sub" id="a-role-desc">// loading...</div>
+    <div class="stat-grid">
+      <div class="stat" onclick="goTo('a-merchants')">
+        <div class="stat-val" id="stat-a-merchants">—</div>
+        <div class="stat-lbl">Merchants</div>
+        <div class="stat-ep">GET /admin/merchants</div>
+      </div>
+      <div class="stat" onclick="goTo('a-payments')">
+        <div class="stat-val" id="stat-a-payments">—</div>
+        <div class="stat-lbl">Payments</div>
+        <div class="stat-ep">GET /admin/payments</div>
+      </div>
+      <div class="stat" onclick="goTo('a-disbursements')">
+        <div class="stat-val" id="stat-a-disbs">—</div>
+        <div class="stat-lbl">Disbursements</div>
+        <div class="stat-ep">GET /admin/disbursements</div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">⚡ Quick Actions</div><div id="a-quick-actions" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
+    <div class="card">
+      <div class="card-title">Provider Balances <span style="font-size:10px;font-weight:400;font-family:'Space Mono',monospace;color:var(--c)">GET /admin/provider-balances</span></div>
+      <div id="a-prov-overview"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-a-merchants">
+    <div class="page-title">Merchants</div>
+    <div class="page-sub">Kelola merchant terdaftar</div>
+    <div class="action-bar" id="a-merch-bar"></div>
+    <div class="card" style="padding:0">
+      <table><thead><tr><th>Nama</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="tb-a-merchants"><tr><td colspan="4" class="loading">Loading</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-a-payments">
+    <div class="page-title">Payments</div>
+    <div class="page-sub">Semua payment lintas merchant</div>
+    <div class="action-bar">
+      <button class="btn btn-ghost btn-sm" onclick="fetchAdminPayments()">↻ Refresh</button>
+      <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:var(--c)">GET /admin/payments</span>
+    </div>
+    <div class="card" style="padding:0">
+      <table><thead><tr><th>ID</th><th>Merchant</th><th>Method</th><th>Provider</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody id="tb-a-payments"><tr><td colspan="6" class="loading">Loading</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-a-disbursements">
+    <div class="page-title">Disbursements</div>
+    <div class="page-sub">Semua disbursement lintas merchant</div>
+    <div class="action-bar">
+      <button class="btn btn-ghost btn-sm" onclick="fetchAdminDisbs()">↻ Refresh</button>
+      <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:var(--c)">GET /admin/disbursements</span>
+    </div>
+    <div class="card" style="padding:0">
+      <table><thead><tr><th>ID</th><th>Merchant</th><th>Bank</th><th>Amount</th><th>Provider</th><th>Status</th></tr></thead>
+      <tbody id="tb-a-disbs"><tr><td colspan="6" class="loading">Loading</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-a-mutations"><div id="a-mutations-content"></div></div>
+  <div class="page" id="page-a-fees"><div id="a-fees-content"></div></div>
+  <div class="page" id="page-a-provider"><div id="a-provider-content"></div></div>
+  <div class="page" id="page-a-admins"><div id="a-admins-content"></div></div>
+
+</div><!-- /content -->
+
+<!-- API LOG -->
+<div class="api-log">
+  <div class="api-log-head">
+    <h3>🔌 API Activity</h3>
+    <button class="log-clear" onclick="clearLog()">Clear</button>
+  </div>
+  <div class="log-entries" id="log-entries">
+    <div class="log-empty" id="log-empty">Connect ke backend untuk mulai</div>
+  </div>
+</div>
+</div><!-- /app -->
+
+<!-- MODALS -->
+<div class="modal-backdrop" id="m-va">
+  <div class="modal">
+    <h2>Buat VA Payment</h2>
+    <div class="modal-ep">POST /v1/payments/va · X-Idempotency-Key: auto</div>
+    <label>Provider</label><select id="va-prov"><option value="midtrans">Midtrans</option><option value="xendit">Xendit</option><option value="doku">DOKU</option></select>
+    <label>Bank</label><select id="va-bank"><option>BCA</option><option>BNI</option><option>BRI</option><option>Mandiri</option></select>
+    <label>Amount (IDR)</label><input id="va-amt" type="number" value="500000">
+    <label>Description</label><input id="va-desc" value="Order #ORD-001">
+    <label>Customer Name</label><input id="va-name" value="Budi Santoso">
+    <label>Customer Email</label><input id="va-email" value="customer@example.com">
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('m-va')">Batal</button>
+      <button class="btn btn-primary" onclick="doCreateVA()">Buat VA</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="m-qris">
+  <div class="modal">
+    <h2>Buat QRIS Payment</h2>
+    <div class="modal-ep">POST /v1/payments/qris · X-Idempotency-Key: auto</div>
+    <label>Provider</label><select id="qr-prov"><option value="xendit">Xendit</option><option value="midtrans">Midtrans</option><option value="doku">DOKU</option></select>
+    <label>Amount (IDR)</label><input id="qr-amt" type="number" value="150000">
+    <label>Description</label><input id="qr-desc" value="Pembayaran QRIS">
+    <label>Expiry (menit)</label><input id="qr-exp" type="number" value="15">
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('m-qris')">Batal</button>
+      <button class="btn btn-primary" onclick="doCreateQRIS()">Buat QRIS</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="m-disb">
+  <div class="modal">
+    <h2>Buat Disbursement</h2>
+    <div class="modal-ep">POST /v1/disbursements · X-Idempotency-Key: auto</div>
+    <label>Provider</label><select id="dsb-prov"><option value="xendit">Xendit</option><option value="doku">DOKU</option></select>
+    <label>Rekening Bank (ID)</label>
+    <select id="dsb-acc-sel"></select>
+    <label>Amount (IDR)</label><input id="dsb-amt" type="number" value="200000">
+    <label>Description</label><input id="dsb-desc" value="Penarikan dana">
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('m-disb')">Batal</button>
+      <button class="btn btn-primary" onclick="doDisburse()">Kirim Dana</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="m-edit-profile">
+  <div class="modal">
+    <h2>Edit Profil Merchant</h2>
+    <div class="modal-ep">PATCH /v1/merchants/me</div>
+    <label>Nama</label><input id="ep-name">
+    <label>Phone</label><input id="ep-phone">
+    <label>Webhook URL</label><input id="ep-webhook">
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('m-edit-profile')">Batal</button>
+      <button class="btn btn-primary" onclick="doUpdateProfile()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="m-add-bank">
+  <div class="modal">
+    <h2>Tambah Rekening Bank</h2>
+    <div class="modal-ep">POST /v1/merchants/me/bank-accounts</div>
+    <label>Bank Code</label><select id="ab-bank"><option>BCA</option><option>BNI</option><option>BRI</option><option>Mandiri</option><option>CIMB</option><option>BTN</option></select>
+    <label>Nomor Rekening</label><input id="ab-num" placeholder="Masukkan nomor rekening">
+    <label>Nama Pemilik</label><input id="ab-name">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--o);margin-top:10px;border:1px solid var(--o);padding:6px">⚠ PENDING VERIFIKASI ADMIN SEBELUM BISA DISBURSEMENT</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('m-add-bank')">Batal</button>
+      <button class="btn btn-primary" onclick="doAddBank()">Tambah</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="m-create-merchant">
+  <div class="modal">
+    <h2>Buat Merchant Baru</h2>
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px">// tidak ada self-register — hanya admin</div>
+    <div class="modal-ep">POST /admin/merchants</div>
+    <label>Nama</label><input id="cm-name" value="Toko Baru">
+    <label>Email</label><input id="cm-email" value="toko@baru.id">
+    <label>Phone</label><input id="cm-phone" value="08222222222">
+    <label>Webhook URL</label><input id="cm-hook" value="https://toko-baru.id/webhook">
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('m-create-merchant')">Batal</button>
+      <button class="btn btn-primary" onclick="doCreateMerchant()">Buat Merchant</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="m-set-fee">
+  <div class="modal">
+    <h2>Set Fee Merchant</h2>
+    <div class="modal-ep">PATCH /admin/merchants/:id/fee</div>
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)" id="fee-merchant-name"></div>
+    <label>Reason (wajib — catat ke fee_audit_logs)</label><input id="fee-reason" placeholder="Negosiasi kontrak Q3 2026">
+    <label>VA Fee (flat IDR)</label><input id="fee-va" type="number" value="3500">
+    <label>QRIS Fee (%)</label><input id="fee-qris" type="number" step="0.01" value="0.6">
+    <label>Disbursement Fee (flat IDR)</label><input id="fee-dsb-val" type="number" value="5500">
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('m-set-fee')">Batal</button>
+      <button class="btn btn-primary" onclick="doSetFee()">Simpan Fee</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="m-create-admin">
+  <div class="modal">
+    <h2>Buat Admin Baru</h2>
+    <div class="modal-ep">POST /admin/admins</div>
+    <label>Email</label><input id="adm-email" value="newops@wanpey.dev">
+    <label>Password</label><input id="adm-pass" type="password" value="SecurePass123!">
+    <label>Role</label><select id="adm-role"><option value="ops">Ops</option><option value="finance">Finance</option><option value="super_admin">Super Admin</option></select>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('m-create-admin')">Batal</button>
+      <button class="btn btn-primary" onclick="doCreateAdmin()">Buat Admin</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let BASE = '';
+let role = 'super_admin';
+let accessToken = '';
+let refreshToken = '';
+let apiKey = '';
+let currentMerchantId = '';
+let currentFeeMerchantId = '';
+let bankAccounts = [];
+
+// ── CONNECT SCREEN ─────────────────────────────────────────────────────────
+function selectRole(r) {
+  role = r;
+  document.querySelectorAll('.role-opt').forEach(el => el.classList.toggle('selected', el.dataset.r === r));
+  document.getElementById('admin-fields').style.display  = r === 'merchant' ? 'none' : 'block';
+  document.getElementById('merchant-fields').style.display = r === 'merchant' ? 'block' : 'none';
+}
+
+async function doConnect() {
+  const btn = document.getElementById('btn-connect');
+  const err = document.getElementById('connect-err');
+  BASE = document.getElementById('base-url').value.replace(/\/$/, '');
+  err.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'CONNECTING...';
+
+  try {
+    if (role === 'merchant') {
+      apiKey = document.getElementById('api-key-input').value.trim();
+      if (!apiKey) throw new Error('Masukkan API Key terlebih dahulu');
+      // verify key works
+      const res = await apiFetch('GET', '/v1/merchants/me');
+      if (!res.ok) throw new Error(`API Key ditolak: ${res.status}`);
+    } else {
+      const email = document.getElementById('login-email').value;
+      const pass  = document.getElementById('login-pass').value;
+      const res = await fetch(`${BASE}/admin/login`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({email, password: pass}),
+      });
+      const data = await res.json();
+      logRaw('POST', '/admin/login', res.status, 'Login admin', data);
+      if (!res.ok) throw new Error(data?.error?.message || `Login gagal: ${res.status}`);
+      accessToken  = data.data.access_token;
+      refreshToken = data.data.refresh_token;
+    }
+    enterDashboard();
+  } catch(e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'CONNECT →';
+  }
+}
+
+function enterDashboard() {
+  document.getElementById('connect-screen').style.display = 'none';
+  document.getElementById('base-url-display').textContent = BASE;
+
+  const badge = document.getElementById('header-role-badge');
+  const icons = {super_admin:'⚡',ops:'🔧',finance:'💰',merchant:'🏪'};
+  const labels = {super_admin:'SUPER ADMIN',ops:'OPS',finance:'FINANCE',merchant:'MERCHANT'};
+  badge.textContent = `${icons[role]} ${labels[role]}`;
+  badge.className = `header-role ${role}`;
+
+  const authBadge = document.getElementById('auth-badge');
+  if (role === 'merchant') { authBadge.textContent='🔑 X-API-KEY'; authBadge.className='top-badge tb-apikey'; }
+  else { authBadge.textContent='🛡️ BEARER JWT'; authBadge.className='top-badge tb-jwt'; }
+
+  buildSidebar();
+  goTo(NAVS[role][0].page);
+}
+
+function logout() {
+  accessToken = refreshToken = apiKey = '';
+  document.getElementById('connect-screen').style.display = 'flex';
+  document.getElementById('connect-screen').style.removeProperty('display');
+  document.getElementById('connect-screen').style.display = 'flex';
+  clearLog();
+}
+
+// ── API LAYER ──────────────────────────────────────────────────────────────
+function authHeaders(extra = {}) {
+  const h = {'Content-Type': 'application/json', ...extra};
+  if (role === 'merchant') h['X-API-Key'] = apiKey;
+  else if (accessToken) h['Authorization'] = `Bearer ${accessToken}`;
+  return h;
+}
+
+async function apiFetch(method, path, body, idempotencyKey) {
+  const headers = authHeaders();
+  if (idempotencyKey) headers['X-Idempotency-Key'] = idempotencyKey;
+  const opts = {method, headers};
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(`${BASE}${path}`, opts);
+}
+
+async function apiCall(method, path, body, desc, idempotencyKey) {
+  const t0 = Date.now();
+  let res, data;
+  try {
+    res  = await apiFetch(method, path, body, idempotencyKey || (body ? genUUID() : undefined));
+    data = await res.json();
+  } catch(e) {
+    logRaw(method, path, 0, desc, {error: e.message});
+    toast('Network error: ' + e.message, 'error');
+    return null;
+  }
+  logRaw(method, path, res.status, `${desc} (${Date.now()-t0}ms)`, data);
+  if (!res.ok) {
+    toast(data?.error?.message || `Error ${res.status}`, 'error');
+    return null;
+  }
+  return data?.data ?? data;
+}
+
+function genUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0;
+    return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────────
+const NAVS = {
+  merchant:[
+    {label:'Overview',page:'m-overview',icon:'🏠'},
+    {label:'Payments',page:'m-payments',icon:'💳'},
+    {label:'Disbursements',page:'m-disbursements',icon:'📤'},
+    {label:'Mutations',page:'m-mutations',icon:'📊'},
+    {label:'Profil & Rekening',page:'m-profile',icon:'🪪'},
+  ],
+  super_admin:[
+    {label:'Overview',page:'a-overview',icon:'🏠'},
+    {label:'Merchants',page:'a-merchants',icon:'🏪'},
+    {label:'Payments',page:'a-payments',icon:'💳'},
+    {label:'Disbursements',page:'a-disbursements',icon:'🏦'},
+    {label:'Mutations',page:'a-mutations',icon:'📒'},
+    {label:'Provider Balances',page:'a-provider',icon:'⚖️'},
+    {label:'Fee Management',page:'a-fees',icon:'💸'},
+    {label:'Admin Users',page:'a-admins',icon:'👑'},
+  ],
+  ops:[
+    {label:'Overview',page:'a-overview',icon:'🏠'},
+    {label:'Merchants',page:'a-merchants',icon:'🏪'},
+    {label:'Payments',page:'a-payments',icon:'💳'},
+    {label:'Disbursements',page:'a-disbursements',icon:'🏦'},
+  ],
+  finance:[
+    {label:'Overview',page:'a-overview',icon:'🏠'},
+    {label:'Payments',page:'a-payments',icon:'💳'},
+    {label:'Disbursements',page:'a-disbursements',icon:'🏦'},
+    {label:'Mutations',page:'a-mutations',icon:'📒'},
+    {label:'Provider Balances',page:'a-provider',icon:'⚖️'},
+    {label:'Fee Management',page:'a-fees',icon:'💸'},
+  ],
+};
+
+function buildSidebar() {
+  const sb = document.getElementById('sidebar');
+  const cat = role==='merchant' ? 'Merchant' : 'Admin Panel';
+  sb.innerHTML = `<div class="scat">${cat}</div>` +
+    NAVS[role].map(n=>`<div class="snav" id="snav-${n.page}" onclick="goTo('${n.page}')">${n.icon} ${n.label}</div>`).join('');
+}
+
+function goTo(pageId) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el = document.getElementById('page-'+pageId);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.snav').forEach(n=>n.classList.remove('active'));
+  const sn = document.getElementById('snav-'+pageId);
+  if(sn) sn.classList.add('active');
+  renderPage(pageId);
+}
+
+function renderPage(p) {
+  const map = {
+    'm-overview':      fetchMerchantOverview,
+    'm-payments':      fetchPayments,
+    'm-disbursements': fetchDisbs,
+    'm-mutations':     fetchMutations,
+    'm-profile':       fetchMerchantProfile,
+    'a-overview':      fetchAdminOverview,
+    'a-merchants':     fetchAdminMerchants,
+    'a-payments':      fetchAdminPayments,
+    'a-disbursements': fetchAdminDisbs,
+    'a-mutations':     renderAdminMutations,
+    'a-fees':          renderAdminFees,
+    'a-provider':      fetchAdminProvider,
+    'a-admins':        renderAdminAdmins,
+  };
+  if(map[p]) map[p]();
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+const fmt = n => 'Rp '+(+n).toLocaleString('id-ID');
+const statusBadge = s => `<span class="status s-${s}">${s}</span>`;
+const provBadge   = p => `<span class="prov prov-${p}">${p}</span>`;
+const methodBadge = m => `<span class="mb mb-${m}">${m.toUpperCase()}</span>`;
+const tagBadge    = t => `<span class="tag">${t}</span>`;
+const tdId        = id => `<td style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">${(id||'').substring(0,8)}…</td>`;
+
+function setTbody(id, html) {
+  const el = document.getElementById(id);
+  if(el) el.innerHTML = html || `<tr><td colspan="99" class="empty-state">// No data</td></tr>`;
+}
+
+// ── MERCHANT FETCHES ───────────────────────────────────────────────────────
+async function fetchMerchantOverview() {
+  const [me, bal, pays, disbs] = await Promise.all([
+    apiCall('GET','/v1/merchants/me',null,'Load profil merchant'),
+    apiCall('GET','/v1/mutations/balance',null,'Load saldo'),
+    apiCall('GET','/v1/payments?limit=1',null,'Count payments'),
+    apiCall('GET','/v1/disbursements?limit=1',null,'Count disbursements'),
+  ]);
+  if(me) {
+    currentMerchantId = me.id;
+    document.getElementById('m-merchant-name').textContent =
+      `// ${me.name} · ${statusBadge(me.status)} · ${me.is_production?'live':'sandbox'}`;
+    document.getElementById('m-merchant-name').innerHTML =
+      `// ${me.name} · ${statusBadge(me.status)} · ${me.is_production?'live':'sandbox'}`;
+    const tbody = document.getElementById('m-profile-tbody');
+    if(tbody) tbody.innerHTML = `
+      <tr><td style="color:var(--muted);width:120px;font-family:'Space Mono',monospace;font-size:11px">ID</td><td style="font-family:'Space Mono',monospace;font-size:11px">${me.id}</td></tr>
+      <tr><td style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">Nama</td><td>${me.name}</td></tr>
+      <tr><td style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">Email</td><td>${me.email}</td></tr>
+      <tr><td style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">Phone</td><td>${me.phone||'-'}</td></tr>
+      <tr><td style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">Status</td><td>${statusBadge(me.status)}</td></tr>
+      <tr><td style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">Webhook</td><td style="font-family:'Space Mono',monospace;font-size:11px">${me.webhook_url||'-'}</td></tr>`;
+    document.getElementById('m-profile-loading').style.display='none';
+    document.getElementById('m-profile-table').style.display='table';
+    document.getElementById('m-profile-actions').style.display='flex';
+    // pre-fill edit modal
+    document.getElementById('ep-name').value    = me.name||'';
+    document.getElementById('ep-phone').value   = me.phone||'';
+    document.getElementById('ep-webhook').value = me.webhook_url||'';
+  }
+  if(bal) {
+    const b = bal.balance ?? bal;
+    document.getElementById('stat-balance').textContent = fmt(b);
+  }
+  if(pays) document.getElementById('stat-payments').textContent = pays.total ?? pays.length ?? '?';
+  if(disbs) document.getElementById('stat-disbs').textContent = disbs.total ?? disbs.length ?? '?';
+}
+
+async function fetchBalance() {
+  const data = await apiCall('GET','/v1/mutations/balance',null,'Ambil saldo terkini');
+  if(!data) return;
+  const b = data.balance ?? data;
+  document.getElementById('stat-balance').textContent = fmt(b);
+  const el2 = document.getElementById('mut-balance');
+  if(el2) el2.textContent = fmt(b);
+}
+
+async function fetchPayments() {
+  const data = await apiCall('GET','/v1/payments?limit=50',null,'List payments merchant');
+  const items = data?.items || data || [];
+  setTbody('tb-m-payments', items.map(p=>`<tr>
+    ${tdId(p.id)}
+    <td>${methodBadge(p.method)}${p.bank_code?' '+p.bank_code:''}</td>
+    <td>${provBadge(p.provider)}</td>
+    <td class="idr">${fmt(p.amount)}</td>
+    <td>${statusBadge(p.status)}</td>
+    <td style="display:flex;gap:4px">
+      <button class="btn btn-ghost btn-sm" onclick="fetchPaymentDetail('${p.id}')">Detail</button>
+      ${p.status==='pending'?`<button class="btn btn-danger btn-sm" onclick="doCancel('${p.id}')">Cancel</button>`:''}
+    </td></tr>`).join(''));
+}
+
+async function fetchPaymentDetail(id) {
+  await apiCall('GET',`/v1/payments/${id}`,null,`Detail payment ${id.substring(0,8)}`);
+}
+
+async function doCancel(id) {
+  if(!confirm('Cancel payment ini?')) return;
+  const data = await apiCall('DELETE',`/v1/payments/${id}`,null,'Cancel payment');
+  if(data) { toast('Payment dibatalkan'); fetchPayments(); }
+}
+
+async function fetchDisbs() {
+  const data = await apiCall('GET','/v1/disbursements?limit=50',null,'List disbursements');
+  const items = data?.items || data || [];
+  setTbody('tb-m-disbs', items.map(d=>`<tr>
+    ${tdId(d.id)}
+    <td>${tagBadge(d.bank_code||'-')}</td>
+    <td class="idr">${fmt(d.amount)}</td>
+    <td style="color:var(--muted)">${fmt(d.fee_amount||0)}</td>
+    <td>${provBadge(d.provider)}</td>
+    <td>${statusBadge(d.status)}</td></tr>`).join(''));
+}
+
+async function fetchMutations() {
+  const [bal, muts] = await Promise.all([
+    apiCall('GET','/v1/mutations/balance',null,'Ambil saldo'),
+    apiCall('GET','/v1/mutations?limit=50',null,'List mutasi'),
+  ]);
+  if(bal) {
+    const b = bal.balance ?? bal;
+    document.getElementById('mut-balance').textContent = fmt(b);
+  }
+  const items = muts?.items || muts || [];
+  document.getElementById('mut-total').textContent = muts?.total ?? items.length;
+  setTbody('tb-m-mutations', items.map(m=>`<tr>
+    ${tdId(m.id)}
+    <td>${tagBadge(m.type)}</td>
+    <td class="idr" style="color:${m.amount>0?'var(--g)':'var(--r)'}">${m.amount>0?'+':''}${fmt(Math.abs(m.amount))}</td>
+    <td style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">${(m.reference_id||'').substring(0,8)||'-'}</td>
+    <td style="color:var(--muted);font-size:11px">${m.created_at?new Date(m.created_at).toLocaleString('id-ID'):'-'}</td></tr>`).join(''));
+}
+
+async function fetchMerchantProfile() {
+  document.getElementById('m-profile-full-loading').style.display='block';
+  document.getElementById('m-profile-full').style.display='none';
+  document.getElementById('m-bank-loading').style.display='block';
+  document.getElementById('m-bank-section').style.display='none';
+
+  const [me, banks] = await Promise.all([
+    apiCall('GET','/v1/merchants/me',null,'Load profil merchant'),
+    apiCall('GET','/v1/merchants/me/bank-accounts',null,'List rekening bank'),
+  ]);
+
+  if(me) {
+    document.getElementById('m-profile-grid').innerHTML = `
+      <div><div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">NAMA</div>${me.name}</div>
+      <div><div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">EMAIL</div>${me.email}</div>
+      <div><div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">PHONE</div>${me.phone||'-'}</div>
+      <div><div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">WEBHOOK</div><span style="font-family:'Space Mono',monospace;font-size:11px">${me.webhook_url||'-'}</span></div>`;
+    document.getElementById('ep-name').value    = me.name||'';
+    document.getElementById('ep-phone').value   = me.phone||'';
+    document.getElementById('ep-webhook').value = me.webhook_url||'';
+    document.getElementById('m-profile-full-loading').style.display='none';
+    document.getElementById('m-profile-full').style.display='block';
+  }
+
+  if(banks !== null) {
+    bankAccounts = Array.isArray(banks) ? banks : banks?.items || [];
+    const selDisb = document.getElementById('dsb-acc-sel');
+    selDisb.innerHTML = bankAccounts
+      .filter(b=>b.is_verified)
+      .map(b=>`<option value="${b.id}">${b.bank_code} - ${b.account_number} (${b.account_name})</option>`)
+      .join('') || '<option disabled>Belum ada rekening terverifikasi</option>';
+
+    document.getElementById('tb-m-banks').innerHTML = bankAccounts.map(b=>`<tr>
+      <td>${tagBadge(b.bank_code)}</td>
+      <td style="font-family:'Space Mono',monospace">${b.account_number}</td>
+      <td>${b.account_name}</td>
+      <td>${b.is_verified ? statusBadge('verified') : statusBadge('pending')}</td>
+      <td>${b.is_primary ? '⭐' : `<button class="btn btn-ghost btn-sm" onclick="doSetPrimary('${b.id}')">Set Primary</button>`}</td>
+      <td>${!b.is_primary ? `<button class="btn btn-danger btn-sm" onclick="doRemoveBank('${b.id}')">Hapus</button>` : '<span style="color:var(--dim);font-size:10px">primary</span>'}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty-state">// Belum ada rekening</td></tr>';
+    document.getElementById('m-bank-loading').style.display='none';
+    document.getElementById('m-bank-section').style.display='block';
+  }
+}
+
+async function doUpdateProfile() {
+  const body = {
+    name: document.getElementById('ep-name').value,
+    phone: document.getElementById('ep-phone').value,
+    webhook_url: document.getElementById('ep-webhook').value,
+  };
+  const data = await apiCall('PATCH','/v1/merchants/me',body,'Update profil merchant');
+  if(data) { closeModal('m-edit-profile'); toast('Profil diupdate'); fetchMerchantOverview(); }
+}
+
+async function doSetPrimary(id) {
+  const data = await apiCall('PATCH',`/v1/merchants/me/bank-accounts/${id}/primary`,{},'Set rekening primary');
+  if(data) { toast('Primary diupdate'); fetchMerchantProfile(); }
+}
+
+async function doRemoveBank(id) {
+  if(!confirm('Hapus rekening ini?')) return;
+  const data = await apiCall('DELETE',`/v1/merchants/me/bank-accounts/${id}`,null,'Hapus rekening bank');
+  if(data !== null) { toast('Rekening dihapus'); fetchMerchantProfile(); }
+}
+
+async function doAddBank() {
+  const body = {
+    bank_code: document.getElementById('ab-bank').value,
+    account_number: document.getElementById('ab-num').value,
+    account_name: document.getElementById('ab-name').value,
+  };
+  const data = await apiCall('POST','/v1/merchants/me/bank-accounts',body,'Tambah rekening bank');
+  if(data) { closeModal('m-add-bank'); toast('Rekening ditambahkan — menunggu verifikasi admin'); fetchMerchantProfile(); }
+}
+
+async function regenKey() {
+  if(!confirm('Regenerate API Key?\nKey lama langsung tidak valid.')) return;
+  const data = await apiCall('POST','/v1/merchants/me/api-key/regenerate',{},'Regen API key — raw key tampil sekali');
+  if(data) toast('API Key baru: ' + (data.api_key||'lihat API log'));
+}
+
+async function doCreateVA() {
+  const body = {
+    provider: document.getElementById('va-prov').value,
+    bank_code: document.getElementById('va-bank').value,
+    amount: +document.getElementById('va-amt').value,
+    currency: 'IDR',
+    description: document.getElementById('va-desc').value,
+    customer_name: document.getElementById('va-name').value,
+    customer_email: document.getElementById('va-email').value,
+    expiry_hours: 24,
+  };
+  const data = await apiCall('POST','/v1/payments/va',body,'Buat VA payment',genUUID());
+  if(data) { closeModal('m-va'); toast('VA payment dibuat'); fetchPayments(); }
+}
+
+async function doCreateQRIS() {
+  const body = {
+    provider: document.getElementById('qr-prov').value,
+    amount: +document.getElementById('qr-amt').value,
+    currency: 'IDR',
+    description: document.getElementById('qr-desc').value,
+    expiry_minutes: +document.getElementById('qr-exp').value,
+  };
+  const data = await apiCall('POST','/v1/payments/qris',body,'Buat QRIS payment',genUUID());
+  if(data) { closeModal('m-qris'); toast('QRIS payment dibuat'); fetchPayments(); }
+}
+
+async function doDisburse() {
+  const selEl = document.getElementById('dsb-acc-sel');
+  const body = {
+    provider: document.getElementById('dsb-prov').value,
+    bank_account_id: selEl.value,
+    amount: +document.getElementById('dsb-amt').value,
+    currency: 'IDR',
+    description: document.getElementById('dsb-desc').value,
+  };
+  if(!body.bank_account_id) { toast('Pilih rekening bank terverifikasi','error'); return; }
+  const data = await apiCall('POST','/v1/disbursements',body,'Buat disbursement',genUUID());
+  if(data) { closeModal('m-disb'); toast('Disbursement dibuat'); fetchDisbs(); }
+}
+
+// ── ADMIN FETCHES ──────────────────────────────────────────────────────────
+async function fetchAdminOverview() {
+  const descs = {
+    super_admin:'// ⚡ Super Admin — full access semua fitur',
+    ops:'// 🔧 Ops — merchant management & view payments',
+    finance:'// 💰 Finance — fees, mutations, provider balances',
+  };
+  document.getElementById('a-role-desc').textContent = descs[role]||'';
+
+  let qa = `<button class="btn btn-ghost" onclick="goTo('a-payments')">📋 Payments</button>
+             <button class="btn btn-ghost" onclick="goTo('a-disbursements')">🏦 Disbursements</button>`;
+  if(canMerch()) qa+=`<button class="btn btn-primary" onclick="openModal('m-create-merchant')">+ Buat Merchant</button><button class="btn btn-ghost" onclick="goTo('a-merchants')">🏪 Merchants</button>`;
+  if(canFee())   qa+=`<button class="btn btn-ghost" onclick="goTo('a-fees')">💸 Fee Management</button>`;
+  if(canProv())  qa+=`<button class="btn btn-ghost" onclick="goTo('a-provider')">⚖️ Provider Balances</button>`;
+  if(isSA())     qa+=`<button class="btn btn-ghost" onclick="goTo('a-admins')">👑 Admin Users</button>`;
+  document.getElementById('a-quick-actions').innerHTML = qa;
+
+  const [merchs, pays, disbs] = await Promise.all([
+    apiCall('GET','/admin/merchants?limit=1',null,'Count merchants'),
+    apiCall('GET','/admin/payments?limit=1',null,'Count payments'),
+    apiCall('GET','/admin/disbursements?limit=1',null,'Count disbursements'),
+  ]);
+  document.getElementById('stat-a-merchants').textContent = merchs?.total ?? '?';
+  document.getElementById('stat-a-payments').textContent  = pays?.total ?? '?';
+  document.getElementById('stat-a-disbs').textContent     = disbs?.total ?? '?';
+
+  if(canProv()) {
+    const prov = await apiCall('GET','/admin/provider-balances',null,'Load provider balances');
+    const items = Array.isArray(prov) ? prov : prov?.items || [];
+    document.getElementById('a-prov-overview').innerHTML = items.length
+      ? `<table><thead><tr><th>Provider</th><th>Balance</th><th>Reconciled</th></tr></thead><tbody>`+
+        items.map(p=>`<tr>
+          <td>${provBadge(p.provider)}</td>
+          <td class="idr">${fmt(p.balance_idr??0)}</td>
+          <td style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">${p.last_reconciled_at?new Date(p.last_reconciled_at).toLocaleString('id-ID'):'<span style="color:var(--r)">never</span>'}</td>
+        </tr>`).join('')+`</tbody></table>`
+      : '<div class="empty-state">// No data</div>';
+  } else {
+    document.getElementById('a-prov-overview').innerHTML =
+      `<div class="role-wall">🚫 Provider balances hanya <strong>super_admin</strong> dan <strong>finance</strong>.</div>`;
+  }
+}
+
+async function fetchAdminMerchants() {
+  const bar = document.getElementById('a-merch-bar');
+  bar.innerHTML = canMerch()
+    ? `<button class="btn btn-primary" onclick="openModal('m-create-merchant')">+ Buat Merchant</button><span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:var(--c)">GET /admin/merchants</span>`
+    : `<div class="role-wall" style="margin:0;flex:1">🚫 Finance tidak bisa buat/kelola merchant.</div>`;
+
+  const data = await apiCall('GET','/admin/merchants?limit=50',null,'List merchants');
+  const items = data?.items || data || [];
+  setTbody('tb-a-merchants', items.map(m=>{
+    let acts = `<button class="btn btn-ghost btn-sm" onclick="apiCall('GET','/admin/merchants/${m.id}',null,'Detail merchant')">Detail</button> `;
+    if(canMerch()) {
+      if(m.status==='pending')   acts+=`<button class="btn btn-success btn-sm" onclick="doApproveMerch('${m.id}','${m.name}')">Approve</button> `;
+      if(m.status==='active')    acts+=`<button class="btn btn-warn btn-sm" onclick="doSuspendMerch('${m.id}','${m.name}')">Suspend</button> `;
+      acts+=`<button class="btn btn-ghost btn-sm" onclick="doVerifyBank('${m.id}')">Verify Bank</button> `;
+    }
+    if(canFee()) acts+=`<button class="btn btn-ghost btn-sm" onclick="openSetFee('${m.id}','${m.name}')">Set Fee</button>`;
+    return `<tr>
+      <td><strong>${m.name}</strong><br><span style="color:var(--muted);font-size:11px">${m.email}</span></td>
+      <td style="color:var(--muted);font-size:11px">${m.email}</td>
+      <td>${statusBadge(m.status)}</td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">${acts}</td></tr>`;
+  }).join(''));
+}
+
+async function fetchAdminPayments() {
+  const data = await apiCall('GET','/admin/payments?limit=50',null,'List payments lintas merchant');
+  const items = data?.items || data || [];
+  setTbody('tb-a-payments', items.map(p=>`<tr>
+    ${tdId(p.id)}
+    <td style="font-size:11px">${p.merchant_name||'-'}</td>
+    <td>${methodBadge(p.method)}</td>
+    <td>${provBadge(p.provider)}</td>
+    <td class="idr">${fmt(p.amount)}</td>
+    <td>${statusBadge(p.status)}</td></tr>`).join(''));
+}
+
+async function fetchAdminDisbs() {
+  const data = await apiCall('GET','/admin/disbursements?limit=50',null,'List disbursements lintas merchant');
+  const items = data?.items || data || [];
+  setTbody('tb-a-disbs', items.map(d=>`<tr>
+    ${tdId(d.id)}
+    <td style="font-size:11px">${d.merchant_name||'-'}</td>
+    <td>${tagBadge(d.bank_code||'-')}</td>
+    <td class="idr">${fmt(d.amount)}</td>
+    <td>${provBadge(d.provider)}</td>
+    <td>${statusBadge(d.status)}</td></tr>`).join(''));
+}
+
+async function fetchAdminProvider() {
+  const el = document.getElementById('a-provider-content');
+  if(!canProv()) {
+    el.innerHTML=`<div class="page-title" style="margin-bottom:12px">Provider Balances</div>
+      <div class="role-wall">🚫 Hanya <strong>super_admin</strong> dan <strong>finance</strong>.<br><code>GET /admin/provider-balances → 403 Forbidden</code></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="page-title">Provider Balances</div>
+    <div class="page-sub">Saldo Wanpey di tiap payment provider · <span style="font-family:'Space Mono',monospace;color:var(--c)">GET /admin/provider-balances</span></div>
+    <div class="card" style="padding:0"><table>
+      <thead><tr><th>Provider</th><th>Balance</th><th>Last Reconciled</th><th>Actions</th></tr></thead>
+      <tbody id="tb-a-prov"><tr><td colspan="4" class="loading">Loading</td></tr></tbody>
+    </table></div>`;
+  const data = await apiCall('GET','/admin/provider-balances',null,'Load provider balances');
+  const items = Array.isArray(data) ? data : data?.items || [];
+  setTbody('tb-a-prov', items.map(p=>`<tr>
+    <td>${provBadge(p.provider)}</td>
+    <td class="idr">${fmt(p.balance_idr??0)}</td>
+    <td style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">${p.last_reconciled_at?new Date(p.last_reconciled_at).toLocaleString('id-ID'):'<span style="color:var(--r)">never</span>'}</td>
+    <td><button class="btn btn-warn btn-sm" onclick="doUpdateProv('${p.provider}')">Update</button></td></tr>`).join(''));
+}
+
+async function doUpdateProv(provider) {
+  const bal = prompt(`Update saldo ${provider} (IDR):`);
+  if(!bal) return;
+  const note = prompt('Catatan rekonsiliasi:') || 'Manual rekonsiliasi';
+  await apiCall('PATCH',`/admin/provider-balances/${provider}`,{balance_idr:+bal,note},'Update provider balance');
+  fetchAdminProvider();
+}
+
+// ── ADMIN MUTATIONS ────────────────────────────────────────────────────────
+async function renderAdminMutations() {
+  const el = document.getElementById('a-mutations-content');
+  if(!canFee()) {
+    el.innerHTML=`<div class="page-title" style="margin-bottom:12px">Mutations</div>
+      <div class="role-wall">🚫 Mutations hanya <strong>super_admin</strong> dan <strong>finance</strong>.<br>Role <strong>${role}</strong>: <code>GET /admin/mutations → 403 Forbidden</code></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="page-title">Mutations</div>
+    <div class="page-sub">Ledger mutasi balance lintas merchant · <span style="font-family:'Space Mono',monospace;color:var(--c)">GET /admin/mutations</span></div>
+    <div class="card" style="padding:0"><table>
+      <thead><tr><th>ID</th><th>Merchant</th><th>Type</th><th>Amount</th><th>Ref</th><th>Waktu</th></tr></thead>
+      <tbody id="tb-a-mutations"><tr><td colspan="6" class="loading">Loading</td></tr></tbody>
+    </table></div>`;
+  const data = await apiCall('GET','/admin/mutations?limit=50',null,'List mutations lintas merchant');
+  const items = data?.items || data || [];
+  setTbody('tb-a-mutations', items.map(m=>`<tr>
+    ${tdId(m.id)}
+    <td style="font-size:11px">${m.merchant_name||'-'}</td>
+    <td>${tagBadge(m.type)}</td>
+    <td class="idr" style="color:${m.amount>0?'var(--g)':'var(--r)'}">${m.amount>0?'+':''}${fmt(Math.abs(m.amount))}</td>
+    <td style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">${(m.reference_id||'').substring(0,8)||'-'}</td>
+    <td style="color:var(--muted);font-size:11px">${m.created_at?new Date(m.created_at).toLocaleString('id-ID'):'-'}</td></tr>`).join(''));
+}
+
+// ── ADMIN FEES ─────────────────────────────────────────────────────────────
+async function renderAdminFees() {
+  const el = document.getElementById('a-fees-content');
+  if(!canFee()) {
+    el.innerHTML=`<div class="page-title" style="margin-bottom:12px">Fee Management</div>
+      <div class="role-wall">🚫 Fee management hanya <strong>super_admin</strong> dan <strong>finance</strong>.<br>Role <strong>ops</strong> tidak punya akses.</div>`;
+    return;
+  }
+  el.innerHTML=`<div class="page-title">Fee Management</div>
+    <div class="page-sub">Fee default global dan platform margin</div>
+    <div class="card">
+      <div class="card-title">Fee Default Global <span style="font-size:10px;font-weight:400;font-family:'Space Mono',monospace;color:var(--c)">GET /admin/fees/default</span></div>
+      <div id="fee-default-loading" class="loading">Loading</div>
+      <div id="fee-default-body" style="display:none">
+        <table style="margin-bottom:12px"><thead><tr><th>Method</th><th>Type</th><th>Value</th></tr></thead>
+        <tbody id="tb-fee-defaults"></tbody></table>
+        <button class="btn btn-primary btn-sm" onclick="promptUpdateFeeDefault()">Update Fee Default</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Platform Margin <span style="font-size:10px;font-weight:400;font-family:'Space Mono',monospace;color:var(--c)">GET /admin/fees/margin</span></div>
+      <div id="fee-margin-loading" class="loading">Loading</div>
+      <div id="fee-margin-body" style="display:none">
+        <table style="margin-bottom:12px"><thead><tr><th>Method</th><th>Margin</th><th>Enabled</th></tr></thead>
+        <tbody id="tb-fee-margin"></tbody></table>
+        ${isSA()?`<button class="btn btn-warn btn-sm" onclick="promptUpdateMargin()">Update Platform Margin</button>`:
+          `<span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">// UPDATE MARGIN: SUPER_ADMIN ONLY</span>`}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Holiday Surcharge <span style="font-size:10px;font-weight:400;font-family:'Space Mono',monospace;color:var(--c)">GET /admin/fees/holidays</span></div>
+      <div id="fee-holiday-loading" class="loading">Loading</div>
+      <div id="fee-holiday-body" style="display:none">
+        <table style="margin-bottom:12px"><thead><tr><th>Nama</th><th>Tanggal</th><th>Surcharge</th><th>Active</th><th>Actions</th></tr></thead>
+        <tbody id="tb-fee-holidays"></tbody></table>
+        <button class="btn btn-primary btn-sm" onclick="promptAddHoliday()">+ Tambah Holiday</button>
+      </div>
+    </div>`;
+
+  const [def_, margin, holidays] = await Promise.all([
+    apiCall('GET','/admin/fees/default',null,'Load fee defaults'),
+    apiCall('GET','/admin/fees/margin',null,'Load platform margin'),
+    apiCall('GET','/admin/fees/holidays',null,'Load holiday surcharges'),
+  ]);
+
+  if(def_) {
+    const feeRows = (d) => `
+      <tr><td>VA</td><td>${d.va?.type||'-'}</td><td class="idr">${d.va?.type==='flat'?fmt(d.va.amount):((d.va?.percentage||0)+'%')}</td></tr>
+      <tr><td>QRIS</td><td>${d.qris?.type||'-'}</td><td>${d.qris?.type==='flat'?fmt(d.qris.amount):((d.qris?.percentage||0)+'%')}</td></tr>
+      <tr><td>Disbursement</td><td>${d.disbursement?.type||'-'}</td><td class="idr">${d.disbursement?.type==='flat'?fmt(d.disbursement.amount):((d.disbursement?.percentage||0)+'%')}</td></tr>`;
+    document.getElementById('tb-fee-defaults').innerHTML = feeRows(def_);
+    document.getElementById('fee-default-loading').style.display='none';
+    document.getElementById('fee-default-body').style.display='block';
+  }
+  if(margin) {
+    document.getElementById('tb-fee-margin').innerHTML = `
+      <tr><td>VA</td><td class="idr">${margin.va?.type==='flat'?fmt(margin.va.amount||0):((margin.va?.percentage||0)+'%')}</td><td>${margin.va?.enabled?'✅':'❌'}</td></tr>
+      <tr><td>QRIS</td><td>${margin.qris?.type==='flat'?fmt(margin.qris.amount||0):((margin.qris?.percentage||0)+'%')}</td><td>${margin.qris?.enabled?'✅':'❌'}</td></tr>
+      <tr><td>Disbursement</td><td class="idr">${fmt(margin.disbursement?.amount||0)}</td><td>${margin.disbursement?.enabled?'✅':'❌'}</td></tr>`;
+    document.getElementById('fee-margin-loading').style.display='none';
+    document.getElementById('fee-margin-body').style.display='block';
+  }
+  if(holidays) {
+    const items = Array.isArray(holidays)?holidays:holidays?.items||[];
+    document.getElementById('tb-fee-holidays').innerHTML = items.length
+      ? items.map(h=>`<tr>
+          <td>${h.name}</td><td style="font-family:'Space Mono',monospace">${h.date}</td>
+          <td class="idr">${fmt(h.surcharge?.amount||0)}</td>
+          <td>${h.is_active?'✅':'❌'}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="doToggleHoliday('${h.id}','${h.name}',${h.is_active})">Toggle</button></td></tr>`).join('')
+      : '<tr><td colspan="5" class="empty-state">// No holidays</td></tr>';
+    document.getElementById('fee-holiday-loading').style.display='none';
+    document.getElementById('fee-holiday-body').style.display='block';
+  }
+}
+
+async function promptUpdateFeeDefault() {
+  const reason = prompt('Reason (wajib):');
+  if(!reason) return;
+  const vaAmt  = +prompt('VA flat fee (IDR):','4000');
+  const qrisPct= +prompt('QRIS percentage (%):','0.7');
+  const dsbAmt = +prompt('Disbursement flat fee (IDR):','6500');
+  const body = {
+    reason,
+    va:{type:'flat',amount:vaAmt},
+    qris:{type:'percentage',percentage:qrisPct},
+    disbursement:{type:'flat',amount:dsbAmt},
+  };
+  await apiCall('PUT','/admin/fees/default',body,'Update fee default global');
+  renderAdminFees();
+}
+
+async function promptUpdateMargin() {
+  const reason = prompt('Reason (wajib):');
+  if(!reason) return;
+  const vaAmt   = +prompt('VA margin flat (IDR):','500');
+  const qrisPct = +prompt('QRIS margin (%):','0.1');
+  await apiCall('PUT','/admin/fees/margin',{reason,va:{type:'flat',amount:vaAmt,enabled:true},qris:{type:'percentage',percentage:qrisPct,enabled:true}},'Update platform margin');
+  renderAdminFees();
+}
+
+async function doToggleHoliday(id, name, current) {
+  await apiCall('PUT',`/admin/fees/holidays/${id}`,{is_active:!current},`Toggle holiday "${name}"`);
+  renderAdminFees();
+}
+
+async function promptAddHoliday() {
+  const name = prompt('Nama holiday:');
+  if(!name) return;
+  const date = prompt('Tanggal (YYYY-MM-DD):');
+  if(!date) return;
+  const amt = +prompt('Surcharge flat (IDR):','2000');
+  await apiCall('POST','/admin/fees/holidays',{name,date,is_active:true,surcharge:{type:'flat',amount:amt}},'Tambah holiday surcharge');
+  renderAdminFees();
+}
+
+// ── ADMIN ADMINS ───────────────────────────────────────────────────────────
+async function renderAdminAdmins() {
+  const el = document.getElementById('a-admins-content');
+  if(!isSA()) {
+    el.innerHTML=`<div class="page-title" style="margin-bottom:12px">Admin Users</div>
+      <div class="role-wall">🚫 Manajemen admin hanya <strong>super_admin</strong>.<br><code>GET /admin/admins → 403 Forbidden</code></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="page-title">Admin Users</div>
+    <div class="page-sub">Kelola akun admin Wanpey</div>
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="openModal('m-create-admin')">+ Buat Admin</button>
+      <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:var(--c)">GET /admin/admins</span>
+    </div>
+    <div class="card" style="padding:0"><table>
+      <thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="tb-a-admins"><tr><td colspan="4" class="loading">Loading</td></tr></tbody>
+    </table></div>`;
+  const data = await apiCall('GET','/admin/admins',null,'List admin users');
+  const items = data?.items || data || [];
+  setTbody('tb-a-admins', items.map(a=>`<tr>
+    <td>${a.email}</td>
+    <td>${tagBadge(a.role)}</td>
+    <td>${statusBadge(a.is_active?'active':'inactive')}</td>
+    <td>${a.role==='super_admin'?
+      `<span style="color:var(--dim);font-family:'Space Mono',monospace;font-size:10px">SELF-DEACTIVATE GUARD</span>`:
+      `<button class="btn btn-danger btn-sm" onclick="doDeactivateAdmin('${a.id}','${a.email}')">Deactivate</button>`}
+    </td></tr>`).join(''));
+}
+
+// ── ADMIN ACTIONS ──────────────────────────────────────────────────────────
+const canMerch = () => role==='super_admin'||role==='ops';
+const canFee   = () => role==='super_admin'||role==='finance';
+const canProv  = () => role==='super_admin'||role==='finance';
+const isSA     = () => role==='super_admin';
+
+async function doApproveMerch(id, name) {
+  const data = await apiCall('PATCH',`/admin/merchants/${id}/approve`,{},'Approve merchant');
+  if(data) { toast(`${name} diapprove`); fetchAdminMerchants(); }
+}
+async function doSuspendMerch(id, name) {
+  if(!confirm(`Suspend merchant "${name}"?`)) return;
+  const data = await apiCall('PATCH',`/admin/merchants/${id}/suspend`,{},'Suspend merchant');
+  if(data) { toast(`${name} disuspend`,'error'); fetchAdminMerchants(); }
+}
+async function doVerifyBank(merchantId) {
+  const banks = await apiCall('GET',`/admin/merchants/${merchantId}/bank-accounts`,null,'List bank accounts merchant');
+  const items = Array.isArray(banks)?banks:banks?.items||[];
+  if(!items.length) { toast('Tidak ada rekening untuk diverifikasi','error'); return; }
+  const unverified = items.filter(b=>!b.is_verified);
+  if(!unverified.length) { toast('Semua rekening sudah terverifikasi'); return; }
+  const b = unverified[0];
+  const data = await apiCall('PATCH',`/admin/merchants/${merchantId}/bank-accounts/${b.id}/verify`,{},'Verifikasi rekening bank');
+  if(data) toast(`Rekening ${b.bank_code} ${b.account_number} terverifikasi`);
+}
+function openSetFee(id, name) {
+  currentFeeMerchantId = id;
+  document.getElementById('fee-merchant-name').textContent = `// ${name}`;
+  openModal('m-set-fee');
+}
+async function doSetFee() {
+  const reason = document.getElementById('fee-reason').value;
+  if(!reason) { toast('Reason wajib diisi','error'); return; }
+  const body = {
+    reason,
+    va:{type:'flat',amount:+document.getElementById('fee-va').value},
+    qris:{type:'percentage',percentage:+document.getElementById('fee-qris').value},
+    disbursement:{type:'flat',amount:+document.getElementById('fee-dsb-val').value},
+  };
+  const data = await apiCall('PATCH',`/admin/merchants/${currentFeeMerchantId}/fee`,body,'Set fee merchant + catat fee_audit_logs');
+  if(data) { closeModal('m-set-fee'); toast('Fee merchant diupdate'); }
+}
+async function doCreateMerchant() {
+  const body = {
+    name: document.getElementById('cm-name').value,
+    email: document.getElementById('cm-email').value,
+    phone: document.getElementById('cm-phone').value,
+    webhook_url: document.getElementById('cm-hook').value,
+    is_production: false,
+  };
+  const data = await apiCall('POST','/admin/merchants',body,'Buat merchant — api_key tampil SEKALI');
+  if(data) {
+    closeModal('m-create-merchant');
+    toast(`Merchant dibuat! API Key: ${data.api_key||'lihat API log'}`);
+    if(document.querySelector('#page-a-merchants.active')) fetchAdminMerchants();
+  }
+}
+async function doDeactivateAdmin(id, email) {
+  if(!confirm(`Deactivate admin "${email}"?`)) return;
+  const data = await apiCall('PATCH',`/admin/admins/${id}/deactivate`,{},'Deactivate admin');
+  if(data) { toast(`Admin ${email} dinonaktifkan`,'error'); renderAdminAdmins(); }
+}
+async function doCreateAdmin() {
+  const body = {
+    email: document.getElementById('adm-email').value,
+    password: document.getElementById('adm-pass').value,
+    role: document.getElementById('adm-role').value,
+  };
+  const data = await apiCall('POST','/admin/admins',body,'Buat admin baru');
+  if(data) { closeModal('m-create-admin'); toast(`Admin ${body.email} (${body.role}) dibuat`); renderAdminAdmins(); }
+}
+
+// ── API LOG ────────────────────────────────────────────────────────────────
+let logIdx = 0;
+function logRaw(method, path, status, desc, body) {
+  const entries = document.getElementById('log-entries');
+  document.getElementById('log-empty').style.display = 'none';
+  const ok = status >= 200 && status < 400;
+  const bodyStr = body ? JSON.stringify(body, null, 2) : '';
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = `
+    <div class="le-top">
+      <span class="le-method ${method}">${method}</span>
+      <span class="le-path" title="${path}">${path}</span>
+      <span class="le-status ${ok?'ok':'err'}">${status||'ERR'}</span>
+    </div>
+    <div class="le-desc">${desc} <span class="le-time">${new Date().toLocaleTimeString('id-ID')}</span></div>
+    ${bodyStr ? `<div class="log-body">${bodyStr}</div>` : ''}`;
+  div.onclick = () => div.classList.toggle('open');
+  entries.prepend(div);
+}
+
+function clearLog() {
+  document.getElementById('log-entries').innerHTML =
+    '<div class="log-empty" id="log-empty">Connect ke backend untuk mulai</div>';
+  logIdx = 0;
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-backdrop').forEach(m => {
+  m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); });
+});
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+let toastT;
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast ${type} show`;
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── CONNECT ENTER ──────────────────────────────────────────────────────────
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doConnect(); });
+document.getElementById('api-key-input').addEventListener('keydown', e => { if(e.key==='Enter') doConnect(); });
+</script>
+</body>
+</html>
